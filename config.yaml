@@ -1,0 +1,16 @@
+name: Climate Schedule
+slug: climate_schedule
+description: Manage climate schedules with a dedicated UI.
+version: 0.1.0
+url: https://example.local/
+arch:
+  - amd64
+  - aarch64
+  - armv7
+startup: services
+init: false
+ingress: true
+ingress_port: 3000
+panel_icon: mdi:calendar-clock
+options: {}
+schema: {}
