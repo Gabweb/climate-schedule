@@ -13,12 +13,12 @@ docker build -t climate-schedule:dev .
 
 Run:
 ```sh
-docker run -d --rm --name climate-schedule -p 3000:3000 climate-schedule:dev
+docker run -d --rm --name climate-schedule -p 3001:3001 climate-schedule:dev
 ```
 
 Check API:
 ```sh
-curl -s http://localhost:3000/api/hello
+curl -s http://localhost:3001/api/hello
 ```
 
 Stop:
