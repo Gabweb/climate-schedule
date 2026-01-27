@@ -1,5 +1,9 @@
 # Climate Schedule Add-on
 
+This project is a Home Assistant add-on that provides a dedicated UI to manage per-room climate schedules and applies target temperatures automatically. It includes a scheduler backend and a React-based UI designed for quick editing and overview. 
+
+Note: this codebase is AI-generated.
+
 ## Local Docker (quick)
 
 Build:
