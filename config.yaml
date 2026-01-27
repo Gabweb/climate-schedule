@@ -14,4 +14,7 @@ ingress_port: 3000
 panel_icon: mdi:calendar-clock
 homeassistant_api: true
 options: {}
-schema: {}
+schema:
+  mqtt_url: str
+  mqtt_username: str?
+  mqtt_password: password?

@@ -9,9 +9,11 @@ import {
 } from "./rooms";
 import { validateRoomsFile } from "./validation";
 import type { RoomConfig, RoomsFile } from "../../shared/models";
+import type { MqttService } from "./mqtt/service";
 
 export type AppOptions = {
   publicDir?: string;
+  mqttService?: MqttService;
 };
 
 export function createApp(options: AppOptions = {}) {
@@ -62,6 +64,7 @@ export function createApp(options: AppOptions = {}) {
       const created = createRoom(input);
       roomsFile.rooms.push(created);
       saveRoomsFile(roomsFile);
+      options.mqttService?.publishDiscovery(created);
       res.status(201).json(created);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid room payload";
@@ -74,12 +77,16 @@ export function createApp(options: AppOptions = {}) {
     try {
       const roomName = req.params.roomName;
       const roomsFile = loadRoomsFile();
+      const roomToDelete = roomsFile.rooms.find((room) => room.name === roomName);
       const nextRooms = roomsFile.rooms.filter((room) => room.name !== roomName);
       if (nextRooms.length === roomsFile.rooms.length) {
         return res.status(404).json({ error: "room not found" });
       }
       const nextRoomsFile: RoomsFile = { ...roomsFile, rooms: nextRooms };
       saveRoomsFile(nextRoomsFile);
+      if (roomToDelete) {
+        options.mqttService?.removeDiscovery(roomToDelete);
+      }
       return res.status(204).send();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to delete room";
@@ -103,6 +110,7 @@ export function createApp(options: AppOptions = {}) {
       };
       validateRoomsFile(nextRoomsFile);
       saveRoomsFile(nextRoomsFile);
+      options.mqttService?.publishDiscovery(payload);
       return res.json(nextRoomsFile.rooms[index]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid room payload";
@@ -133,6 +141,7 @@ export function createApp(options: AppOptions = {}) {
       room.modes.push(mode);
       validateRoomsFile(roomsFile);
       saveRoomsFile(roomsFile);
+      options.mqttService?.publishDiscovery(room);
       return res.status(201).json(mode);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid mode payload";
@@ -162,6 +171,7 @@ export function createApp(options: AppOptions = {}) {
         room.activeModeName = room.modes[0].name;
       }
       saveRoomsFile(roomsFile);
+      options.mqttService?.publishDiscovery(room);
       return res.status(204).send();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to delete mode";
@@ -187,6 +197,7 @@ export function createApp(options: AppOptions = {}) {
       }
       room.activeModeName = activeModeName;
       saveRoomsFile(roomsFile);
+      options.mqttService?.publishDiscovery(room);
       return res.json(room);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid active mode payload";
@@ -215,6 +226,7 @@ export function createApp(options: AppOptions = {}) {
       mode.schedule = schedule;
       validateRoomsFile(roomsFile);
       saveRoomsFile(roomsFile);
+      options.mqttService?.publishDiscovery(room);
       return res.json(mode);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid schedule payload";

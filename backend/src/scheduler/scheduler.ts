@@ -3,11 +3,13 @@ import type { RoomConfig } from "../../../shared/models";
 import { activeScheduleForRoom, validateGranularity, validateScheduleBlocks } from "../schedule";
 import type { ClimateAdapter } from "../adapters/climate";
 import { loadRoomsFile } from "../rooms";
+import type { MqttService } from "../mqtt/service";
 
 export type SchedulerOptions = {
   adapter: ClimateAdapter;
   timeZone?: string;
   intervalMs?: number;
+  mqttService?: MqttService;
 };
 
 type LastApplied = Record<string, number>;
@@ -40,6 +42,7 @@ export function startScheduler(options: SchedulerOptions) {
           });
           lastApplied[key] = block.targetC;
         }
+        options.mqttService?.publishRoomState(room, block.targetC);
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown scheduler error";
         console.warn(`Scheduler room ${room.name} error: ${message}`);
