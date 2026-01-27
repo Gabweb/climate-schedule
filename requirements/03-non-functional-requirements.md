@@ -24,3 +24,4 @@
 ## Testing
 - Backend logic has unit and end-to-end tests.
 - Core scheduling logic is covered by unit tests.
+- No tests are required for the React UI; only the underlying logic is tested.
