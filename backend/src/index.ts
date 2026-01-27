@@ -5,24 +5,24 @@ import { startScheduler } from "./scheduler/scheduler";
 import { createMqttService } from "./mqtt/service";
 import { loadRoomsFile, saveRoomsFile } from "./rooms";
 
-const port = Number(process.env.PORT) || 3000;
+const port = Number(process.env.PORT) || 3001;
 const mqttUrl = process.env.MQTT_URL;
 const mqttService = mqttUrl
   ? createMqttService({
-      config: {
-        url: mqttUrl,
-        username: process.env.MQTT_USERNAME,
-        password: process.env.MQTT_PASSWORD
-      },
-      onPresetChange: async (roomName, preset) => {
-        const roomsFile = loadRoomsFile();
-        const room = roomsFile.rooms.find((entry) => entry.name === roomName);
-        if (!room) return;
-        if (!room.modes.some((mode) => mode.name === preset)) return;
-        room.activeModeName = preset;
-        saveRoomsFile(roomsFile);
-      }
-    })
+    config: {
+      url: mqttUrl,
+      username: process.env.MQTT_USERNAME,
+      password: process.env.MQTT_PASSWORD
+    },
+    onPresetChange: async (roomName, preset) => {
+      const roomsFile = loadRoomsFile();
+      const room = roomsFile.rooms.find((entry) => entry.name === roomName);
+      if (!room) return;
+      if (!room.modes.some((mode) => mode.name === preset)) return;
+      room.activeModeName = preset;
+      saveRoomsFile(roomsFile);
+    }
+  })
   : undefined;
 
 if (mqttService) {

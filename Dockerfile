@@ -1,4 +1,6 @@
 # syntax=docker/dockerfile:1
+ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base:latest
+
 FROM node:20-alpine AS ui-build
 WORKDIR /app/ui
 COPY ui/package*.json ./
@@ -14,13 +16,17 @@ RUN npm install --no-audit --no-fund
 COPY backend/ ./
 COPY shared/ /app/shared/
 RUN npm run build
+RUN npm prune --omit=dev
 
-FROM node:20-alpine
+FROM $BUILD_FROM
 WORKDIR /app/backend
+RUN apk add --no-cache nodejs
 ENV NODE_ENV=production
 COPY --from=backend-build /app/backend/dist ./dist
 COPY --from=backend-build /app/backend/package.json ./package.json
-RUN npm install --omit=dev --no-audit --no-fund
+COPY --from=backend-build /app/backend/node_modules ./node_modules
 COPY --from=ui-build /app/ui/dist ./public
-EXPOSE 3000
-CMD ["node", "dist/backend/src/index.js"]
+COPY run.sh /run.sh
+RUN chmod +x /run.sh
+EXPOSE 3001
+CMD ["/run.sh"]
