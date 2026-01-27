@@ -23,6 +23,8 @@
 - Schedules are stored and evaluated by the add-on, not by external services.
 - The add-on calls Home Assistant services (e.g., `climate.set_temperature`).
 - Schedules apply per zone (room), not globally.
+- Room names are unique and used as identifiers.
+- Home Assistant API access is via Supervisor proxy (`/core`) and `SUPERVISOR_TOKEN` (no manual token entry).
 
 ## Success criteria (draft)
 - A user can create a daily schedule and apply it to one or more climate entities within 5 minutes.

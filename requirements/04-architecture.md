@@ -17,7 +17,7 @@
 
 ## Integration points
 - Home Assistant Supervisor for add-on lifecycle.
-- Home Assistant Core API for entity state and service calls.
+- Home Assistant Core API for entity state and service calls (via Supervisor proxy).
 - Ingress for UI access.
 
 ## Technology candidates (to confirm)

@@ -12,6 +12,4 @@
 ## Configuration
 
 ## UX
-- Should the UI be optimized for mobile use?
 - Is a calendar/timeline view sufficient, or is a wizard needed?
-- Should there be notifications on failures?

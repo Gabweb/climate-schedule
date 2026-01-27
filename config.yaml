@@ -12,5 +12,6 @@ init: false
 ingress: true
 ingress_port: 3000
 panel_icon: mdi:calendar-clock
+homeassistant_api: true
 options: {}
 schema: {}
