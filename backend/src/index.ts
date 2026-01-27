@@ -1,24 +1,23 @@
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
+import { createApp } from "./app";
+import { createHomeAssistantAdapterFromEnv } from "./adapters/homeAssistant";
+import { createNoopAdapter } from "./adapters/climate";
+import { startScheduler } from "./scheduler/scheduler";
 
-const app = express();
-const port = 3000;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const publicDir = path.join(__dirname, "..", "public");
-
-app.get("/api/hello", (_req, res) => {
-  res.json({ message: "hello world" });
-});
-
-app.use(express.static(publicDir));
-
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(publicDir, "index.html"));
-});
+const port = Number(process.env.PORT) || 3000;
+const app = createApp();
 
 app.listen(port, () => {
   console.log("backend listening on http://localhost:" + port);
 });
+
+try {
+  const adapter =
+    process.env.HA_BASE_URL && process.env.HA_TOKEN
+      ? createHomeAssistantAdapterFromEnv()
+      : createNoopAdapter();
+  startScheduler({ adapter });
+  console.log("scheduler started");
+} catch (error) {
+  const message = error instanceof Error ? error.message : "scheduler failed to start";
+  console.warn(message);
+}

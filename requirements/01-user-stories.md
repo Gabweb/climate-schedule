@@ -5,6 +5,7 @@
 - As a user, I want to set overrides (e.g., a one-time change for today) without editing the full schedule.
 - As a user, I want to pause or disable a schedule temporarily.
 - As a user, I want adjacent time blocks to auto-adjust so the schedule always covers 00:00–23:59 without gaps.
+- As a user, I want to add or remove time blocks (up to 10) so I can match my routine.
 
 ## Execution and visibility
 - As a user, I want to see when a schedule last ran and what temperature it applied so that I can verify behavior.

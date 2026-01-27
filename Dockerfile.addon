@@ -15,12 +15,13 @@ COPY backend/ ./
 COPY shared/ /app/shared/
 RUN npm run build
 
-FROM node:20-alpine
+FROM ghcr.io/home-assistant/base:latest
 WORKDIR /app/backend
 ENV NODE_ENV=production
 COPY --from=backend-build /app/backend/dist ./dist
 COPY --from=backend-build /app/backend/package.json ./package.json
 RUN npm install --omit=dev --no-audit --no-fund
 COPY --from=ui-build /app/ui/dist ./public
-EXPOSE 3000
-CMD ["node", "dist/backend/src/index.js"]
+COPY run.sh /run.sh
+RUN chmod +x /run.sh
+CMD ["/run.sh"]
