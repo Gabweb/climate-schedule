@@ -1,11 +1,12 @@
 import type { RoomConfig } from "../../../shared/models";
+import { roomKey } from "../../../shared/roomKey";
 import { getMqttClient, type MqttConfig } from "./client";
 import { buildDiscoveryConfig, buildUniqueId, discoveryPayload, discoveryTopic } from "./discovery";
 
 export type MqttServiceOptions = {
   config: MqttConfig;
-  onPresetChange: (roomName: string, preset: string) => Promise<void>;
-  onTemperatureCommand?: (roomName: string, temperature: number) => Promise<void>;
+  onPresetChange: (roomKey: string, preset: string) => Promise<void>;
+  onTemperatureCommand?: (roomKey: string, temperature: number) => Promise<void>;
 };
 
 const subscribed = new Set<string>();
@@ -34,7 +35,7 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
       return;
     }
     console.log(
-      `MQTT: Publishing "${room.name}" with ${JSON.stringify({
+      `MQTT: Publishing "${roomKey(room)}" with ${JSON.stringify({
         uniqueId: config.uniqueId,
         presets: config.presetModes
       })}`
@@ -55,13 +56,14 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
       client.subscribe(config.tempCommandTopic);
       subscribed.add(config.tempCommandTopic);
     }
-    presetTopicToRoom.set(config.presetModeCommandTopic, room.name);
-    temperatureTopicToRoom.set(config.tempCommandTopic, room.name);
+    const key = roomKey(room);
+    presetTopicToRoom.set(config.presetModeCommandTopic, key);
+    temperatureTopicToRoom.set(config.tempCommandTopic, key);
   };
 
   const removeDiscovery = (room: RoomConfig) => {
     const uniqueId = buildUniqueId(room);
-    console.log(`MQTT: Removing "${room.name}" discovery (${uniqueId}).`);
+    console.log(`MQTT: Removing "${roomKey(room)}" discovery (${uniqueId}).`);
     client.publish(discoveryTopic(uniqueId), "", { retain: true });
     publishedDiscovery.delete(uniqueId);
   };
@@ -73,7 +75,7 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
   ) => {
     const config = buildDiscoveryConfig(room);
     console.log(
-      `MQTT: Updating "${room.name}" to target temp ${targetTemperature}C (preset "${room.activeModeName}").`
+      `MQTT: Updating "${roomKey(room)}" to target temp ${targetTemperature}C (preset "${room.activeModeName}").`
     );
     client.publish(config.presetModeStateTopic, room.activeModeName, { retain: true });
     client.publish(config.tempStateTopic, String(targetTemperature), { retain: true });
@@ -86,23 +88,23 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
   client.on("message", async (topic, payload) => {
     if (presetTopicToRoom.has(topic)) {
       const preset = payload.toString();
-      const roomName = presetTopicToRoom.get(topic);
-      if (!roomName) return;
-      console.log(`MQTT: Activating preset "${preset}" in "${roomName}".`);
-      await options.onPresetChange(roomName, preset);
+      const key = presetTopicToRoom.get(topic);
+      if (!key) return;
+      console.log(`MQTT: Activating preset "${preset}" in "${key}".`);
+      await options.onPresetChange(key, preset);
       return;
     }
 
     if (temperatureTopicToRoom.has(topic)) {
-      const roomName = temperatureTopicToRoom.get(topic);
-      if (!roomName) return;
+      const key = temperatureTopicToRoom.get(topic);
+      if (!key) return;
       const next = Number(payload.toString());
       if (Number.isNaN(next)) {
-        console.warn(`MQTT: Ignoring invalid temperature command for "${roomName}".`);
+        console.warn(`MQTT: Ignoring invalid temperature command for "${key}".`);
         return;
       }
-      console.log(`MQTT: Temperature command ${next}C for "${roomName}".`);
-      await options.onTemperatureCommand?.(roomName, next);
+      console.log(`MQTT: Temperature command ${next}C for "${key}".`);
+      await options.onTemperatureCommand?.(key, next);
     }
   });
 

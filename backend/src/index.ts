@@ -8,6 +8,7 @@ import { createNoopAdapter } from "./adapters/climate";
 import { startScheduler } from "./scheduler/scheduler";
 import { createMqttService, type MqttService } from "./mqtt/service";
 import { loadRoomsFile, saveRoomsFile } from "./rooms";
+import { roomKey } from "../../shared/roomKey";
 
 const port = Number(process.env.PORT) || 3001;
 const mqttUrl = process.env.MQTT_URL;
@@ -30,16 +31,18 @@ async function main() {
           username: mqttUsername,
           password: mqttPassword
         },
-        onPresetChange: async (roomName, preset) => {
+        onPresetChange: async (roomKeyParam, preset) => {
           const roomsFile = loadRoomsFile();
-          const room = roomsFile.rooms.find((entry) => entry.name === roomName);
+          const room = roomsFile.rooms.find((entry) => roomKey(entry) === roomKeyParam);
           if (!room) return;
           if (!room.modes.some((mode) => mode.name === preset)) return;
           room.activeModeName = preset;
           saveRoomsFile(roomsFile);
         },
-        onTemperatureCommand: async () => {
-          console.log("MQTT: Temperature commands are ignored by design.");
+        onTemperatureCommand: async (roomKeyParam) => {
+          console.log(
+            `MQTT: Temperature commands for "${roomKeyParam}" are ignored by design.`
+          );
         }
       });
     }

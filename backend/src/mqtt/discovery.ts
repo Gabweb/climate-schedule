@@ -27,7 +27,7 @@ export function buildDiscoveryConfig(room: RoomConfig): DiscoveryConfig {
   const base = `climateSchedule/${uniqueId}`;
   return {
     uniqueId,
-    name: room.name,
+    name: `${room.floor} ${room.name}`,
     presetModes: room.modes.map((mode) => mode.name),
     baseTopic: base,
     currentTemperatureTopic: `${base}/state/current_temperature`,

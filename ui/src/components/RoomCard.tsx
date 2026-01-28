@@ -2,11 +2,12 @@ import { Card, List, Space, Tag, Typography, Button, Dropdown } from "antd";
 import { DownOutlined, EditOutlined } from "@ant-design/icons";
 import type { RoomConfig } from "../../../shared/models";
 import { findScheduleBlockAtMinute, isMinuteInBlock } from "../../../shared/schedule";
+import { roomKey } from "../../../shared/roomKey";
 
 export type RoomCardProps = {
   room: RoomConfig;
-  onEditRoom: (roomName: string) => void;
-  onSetActiveMode: (roomName: string, modeName: string) => void;
+  onEditRoom: (roomKey: string) => void;
+  onSetActiveMode: (roomKey: string, modeName: string) => void;
   nowMinute: number;
 };
 
@@ -19,6 +20,7 @@ export default function RoomCard({ room, onEditRoom, onSetActiveMode, nowMinute 
     label: mode.name
   }));
   const hasMultipleModes = room.modes.length > 1;
+  const roomId = roomKey(room);
 
   return (
     <Card
@@ -31,7 +33,7 @@ export default function RoomCard({ room, onEditRoom, onSetActiveMode, nowMinute 
               type="text"
               icon={<EditOutlined />}
               aria-label="Edit room"
-              onClick={() => onEditRoom(room.name)}
+              onClick={() => onEditRoom(roomId)}
             />
           </Space>
         </div>
@@ -43,7 +45,7 @@ export default function RoomCard({ room, onEditRoom, onSetActiveMode, nowMinute 
               trigger={["click"]}
               menu={{
                 items: modeOptions,
-                onClick: ({ key }) => onSetActiveMode(room.name, String(key))
+                onClick: ({ key }) => onSetActiveMode(roomId, String(key))
               }}
             >
               <Tag color="green" style={{ cursor: "pointer" }}>

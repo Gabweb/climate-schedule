@@ -8,12 +8,15 @@ import {
   Popconfirm,
   Select,
   Table,
+  TimePicker,
   Tabs,
   Typography
 } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { RoomConfig, ScheduleBlock } from "../../../shared/models";
 import { parseTimeToMinutes } from "../../../shared/schedule";
+import { roomKey } from "../../../shared/roomKey";
+import dayjs, { type Dayjs } from "dayjs";
 
 export type ModeDraft = {
   name: string;
@@ -31,14 +34,19 @@ type SettingsPanelProps = {
   roomEditDraft: RoomEditDraft;
   onModeDraftChange: (draft: ModeDraft) => void;
   onRoomEditDraftChange: (draft: RoomEditDraft) => void;
-  onSaveRoom: (roomId: string) => void;
-  onCreateMode: (roomName: string) => void;
-  onDeleteMode: (roomName: string, modeName: string) => void;
-  onRenameMode: (roomName: string, modeName: string, nextName: string) => void;
-  onScheduleChange: (index: number, key: keyof ScheduleBlock, value: string | number) => void;
-  onAddSlot: () => void;
-  onRemoveSlot: (index: number) => void;
-  onSaveSchedule: () => void;
+  onSaveRoom: (roomKey: string) => void;
+  onCreateMode: (roomKey: string) => void;
+  onDeleteMode: (roomKey: string, modeName: string) => void;
+  onRenameMode: (roomKey: string, modeName: string, nextName: string) => void;
+  onScheduleChange: (
+    modeName: string,
+    index: number,
+    key: keyof ScheduleBlock,
+    value: string | number
+  ) => void;
+  onAddSlot: (modeName: string) => void;
+  onRemoveSlot: (modeName: string, index: number) => void;
+  onSaveSchedule: (modeName: string) => void;
 };
 
 const floors: RoomConfig["floor"][] = ["UG", "EG", "1OG", "2OG"];
@@ -64,14 +72,21 @@ export default function SettingsPanel({
   const renameTimerRef = useRef<number | null>(null);
   const schedule = selectedMode?.schedule ?? [];
   const lastIndex = schedule.length - 1;
+  const roomId = room ? roomKey(room) : null;
+
+  const timeValue = (value: string): Dayjs | null => {
+    const parsed = dayjs(value, "HH:mm");
+    return parsed.isValid() ? parsed : null;
+  };
+
+  const minutesToDisable = (step: number) =>
+    Array.from({ length: 60 }, (_, minute) => minute).filter((minute) => minute % step !== 0);
 
   useEffect(() => {
     const initial = room?.modes[0]?.name ?? null;
     setActiveTab(initial);
-    setModeNameDraft(
-      room?.modes.find((mode) => mode.name === initial)?.name ?? ""
-    );
-  }, [room?.name]);
+    setModeNameDraft(room?.modes.find((mode) => mode.name === initial)?.name ?? "");
+  }, [roomId]);
 
   useEffect(() => {
     setModeNameDraft(selectedMode?.name ?? "");
@@ -87,7 +102,9 @@ export default function SettingsPanel({
     renameTimerRef.current = window.setTimeout(() => {
       const nextName = modeNameDraft.trim();
       if (!nextName) return;
-      onRenameMode(room.name, selectedMode.name, nextName);
+      if (roomId) {
+        onRenameMode(roomId, selectedMode.name, nextName);
+      }
       setActiveTab(nextName);
     }, 1000);
     return () => {
@@ -178,7 +195,7 @@ export default function SettingsPanel({
               }
             />
           </Form.Item>
-          <Button type="primary" onClick={() => onSaveRoom(room.name)}>
+          <Button type="primary" onClick={() => roomId && onSaveRoom(roomId)}>
             Save room
           </Button>
         </Form>
@@ -207,7 +224,7 @@ export default function SettingsPanel({
               onChange={(event) => onModeDraftChange({ ...modeDraft, name: event.target.value })}
             />
           </Form.Item>
-          <Button type="primary" onClick={() => onCreateMode(room.name)}>
+          <Button type="primary" onClick={() => roomId && onCreateMode(roomId)}>
             Add mode
           </Button>
         </Form>
@@ -237,13 +254,22 @@ export default function SettingsPanel({
                 title: "Start",
                 dataIndex: "start",
                 render: (value, record) => (
-                  <Input
-                    type="time"
-                    step={600}
-                    value={value}
+                  <TimePicker
+                    format="HH:mm"
+                    value={timeValue(value)}
                     status={getStartInvalid(record.index) ? "error" : undefined}
-                    onChange={(event) => onScheduleChange(record.index, "start", event.target.value)}
+                    onChange={(_, valueString) => {
+                      if (!valueString) return;
+                      onScheduleChange(selectedMode.name, record.index, "start", valueString);
+                    }}
+                    allowClear={false}
+                    showNow={false}
+                    minuteStep={10}
                     disabled={record.index === 0}
+                    disabledTime={() => ({
+                      disabledMinutes: () => minutesToDisable(10)
+                    })}
+                    style={{ width: "100%" }}
                   />
                 )
               },
@@ -251,12 +277,26 @@ export default function SettingsPanel({
                 title: "End",
                 dataIndex: "end",
                 render: (value, record) => (
-                  <Input
-                    type="time"
-                    step={60}
-                    value={value}
+                  <TimePicker
+                    format="HH:mm"
+                    value={timeValue(value)}
                     status={getEndInvalid(record.index) ? "error" : undefined}
-                    onChange={(event) => onScheduleChange(record.index, "end", event.target.value)}
+                    onChange={(_, valueString) => {
+                      if (!valueString) return;
+                      onScheduleChange(selectedMode.name, record.index, "end", valueString);
+                    }}
+                    allowClear={false}
+                    showNow={false}
+                    minuteStep={10}
+                    disabledTime={() =>
+                      record.index === lastIndex
+                        ? {}
+                        : {
+                          disabledMinutes: () => minutesToDisable(10)
+                        }
+                    }
+                    disabled={record.index === lastIndex}
+                    style={{ width: "100%" }}
                   />
                 )
               },
@@ -270,7 +310,12 @@ export default function SettingsPanel({
                     step={0.5}
                     value={value}
                     onChange={(next) =>
-                      onScheduleChange(record.index, "targetC", Number(next ?? value))
+                      onScheduleChange(
+                        selectedMode.name,
+                        record.index,
+                        "targetC",
+                        Number(next ?? value)
+                      )
                     }
                   />
                 )
@@ -282,7 +327,7 @@ export default function SettingsPanel({
                   <Button
                     type="text"
                     icon={<MinusCircleOutlined />}
-                    onClick={() => onRemoveSlot(record.index)}
+                    onClick={() => onRemoveSlot(selectedMode.name, record.index)}
                     disabled={selectedMode.schedule.length <= 1}
                     aria-label="Remove time slot"
                   />
@@ -293,19 +338,19 @@ export default function SettingsPanel({
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <Button
               icon={<PlusOutlined />}
-              onClick={onAddSlot}
+              onClick={() => onAddSlot(selectedMode.name)}
               disabled={selectedMode.schedule.length >= 10}
             >
               Add slot
             </Button>
-            <Button type="primary" onClick={onSaveSchedule}>
+            <Button type="primary" onClick={() => onSaveSchedule(selectedMode.name)}>
               Save schedule
             </Button>
             <Popconfirm
               title="Delete this mode?"
               okText="Yes"
               cancelText="No"
-              onConfirm={() => onDeleteMode(room.name, selectedMode.name)}
+              onConfirm={() => roomId && onDeleteMode(roomId, selectedMode.name)}
               disabled={room.modes.length <= 1}
             >
               <Button danger disabled={room.modes.length <= 1}>

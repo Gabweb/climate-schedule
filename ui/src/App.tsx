@@ -3,6 +3,7 @@ import { Button, Card, Drawer, Layout, Typography, message } from "antd";
 import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
 import type { RoomConfig, RoomsFile, ScheduleBlock } from "../../shared/models";
 import { minuteOfDayInTimeZone, minutesToTime, parseTimeToMinutes } from "../../shared/schedule";
+import { roomKey } from "../../shared/roomKey";
 import RoomList from "./components/RoomList";
 import SettingsPanel, { ModeDraft, RoomEditDraft } from "./components/SettingsPanel";
 import AddRoomForm, { RoomDraft } from "./components/AddRoomForm";
@@ -24,7 +25,7 @@ type LoadState =
 
 export default function App() {
   const [state, setState] = useState<LoadState>({ status: "idle" });
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoomKey, setSelectedRoomKey] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [roomDraft, setRoomDraft] = useState<RoomDraft>({
     name: "",
@@ -47,8 +48,8 @@ export default function App() {
     fetchRooms()
       .then((data) => {
         setState({ status: "loaded", data });
-        if (!selectedRoomId && data.rooms.length > 0) {
-          setSelectedRoomId(data.rooms[0].name);
+        if (!selectedRoomKey && data.rooms.length > 0) {
+          setSelectedRoomKey(roomKey(data.rooms[0]));
         }
       })
       .catch((error) => {
@@ -70,8 +71,8 @@ export default function App() {
 
   const rooms = state.status === "loaded" ? state.data.rooms : [];
   const selectedRoom = useMemo(
-    () => rooms.find((room) => room.name === selectedRoomId) ?? null,
-    [rooms, selectedRoomId]
+    () => rooms.find((room) => roomKey(room) === selectedRoomKey) ?? null,
+    [rooms, selectedRoomKey]
   );
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function App() {
       floor: selectedRoom.floor,
       entityId
     });
-  }, [selectedRoom?.name]);
+  }, [selectedRoomKey]);
 
   const handleCreateRoom = async () => {
     try {
@@ -102,9 +103,9 @@ export default function App() {
     }
   };
 
-  const handleDeleteRoom = async (roomName: string) => {
+  const handleDeleteRoom = async (roomKeyValue: string) => {
     try {
-      await deleteRoom(roomName);
+      await deleteRoom(roomKeyValue);
       loadRooms();
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to delete room";
@@ -112,7 +113,7 @@ export default function App() {
     }
   };
 
-  const handleSaveRoom = async (roomName: string) => {
+  const handleSaveRoom = async (roomKeyValue: string) => {
     if (!selectedRoom) return;
     try {
       const nextName = roomEditDraft.name.trim();
@@ -124,8 +125,8 @@ export default function App() {
           ? [{ type: "ha_climate", entityId: roomEditDraft.entityId.trim() }]
           : []
       };
-      await updateRoom(roomName, nextRoom);
-      setSelectedRoomId(nextName);
+      await updateRoom(roomKeyValue, nextRoom);
+      setSelectedRoomKey(roomKey(nextRoom));
       loadRooms();
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to save room";
@@ -133,9 +134,9 @@ export default function App() {
     }
   };
 
-  const handleSetActiveMode = async (roomName: string, activeModeName: string) => {
+  const handleSetActiveMode = async (roomKeyValue: string, activeModeName: string) => {
     try {
-      await setActiveMode(roomName, activeModeName);
+      await setActiveMode(roomKeyValue, activeModeName);
       loadRooms();
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to set active mode";
@@ -143,9 +144,9 @@ export default function App() {
     }
   };
 
-  const handleCreateMode = async (roomName: string) => {
+  const handleCreateMode = async (roomKeyValue: string) => {
     try {
-      await createMode(roomName, { name: modeDraft.name.trim() });
+      await createMode(roomKeyValue, { name: modeDraft.name.trim() });
       setModeDraft({ name: "" });
       loadRooms();
     } catch (error) {
@@ -154,9 +155,9 @@ export default function App() {
     }
   };
 
-  const handleDeleteMode = async (roomName: string, modeName: string) => {
+  const handleDeleteMode = async (roomKeyValue: string, modeName: string) => {
     try {
-      await deleteMode(roomName, modeName);
+      await deleteMode(roomKeyValue, modeName);
       loadRooms();
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to delete mode";
@@ -164,7 +165,7 @@ export default function App() {
     }
   };
 
-  const handleRenameMode = async (roomName: string, modeName: string, nextName: string) => {
+  const handleRenameMode = async (roomKeyValue: string, modeName: string, nextName: string) => {
     if (!selectedRoom) return;
     const trimmed = nextName.trim();
     if (!trimmed) return;
@@ -181,7 +182,7 @@ export default function App() {
           mode.name === modeName ? { ...mode, name: trimmed } : mode
         )
       };
-      await updateRoom(roomName, nextRoom);
+      await updateRoom(roomKeyValue, nextRoom);
       loadRooms();
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to rename mode";
@@ -189,11 +190,16 @@ export default function App() {
     }
   };
 
-  const handleScheduleChange = (index: number, key: keyof ScheduleBlock, value: string | number) => {
+  const handleScheduleChange = (
+    modeName: string,
+    index: number,
+    key: keyof ScheduleBlock,
+    value: string | number
+  ) => {
     if (!selectedRoom) return;
-    const activeMode = selectedRoom.modes.find((mode) => mode.name === selectedRoom.activeModeName);
-    if (!activeMode) return;
-    const nextSchedule = activeMode.schedule.map((block) => ({ ...block }));
+    const targetMode = selectedRoom.modes.find((mode) => mode.name === modeName);
+    if (!targetMode) return;
+    const nextSchedule = targetMode.schedule.map((block) => ({ ...block }));
     const isLast = index === nextSchedule.length - 1;
     if (key === "start" && typeof value === "string" && index > 0) {
       const nextStart = value;
@@ -210,20 +216,23 @@ export default function App() {
     const nextRoom: RoomConfig = {
       ...selectedRoom,
       modes: selectedRoom.modes.map((mode) =>
-        mode.name === activeMode.name ? { ...mode, schedule: nextSchedule } : mode
+        mode.name === targetMode.name ? { ...mode, schedule: nextSchedule } : mode
       )
     };
-    const nextRooms = rooms.map((room) => (room.name === nextRoom.name ? nextRoom : room));
+    const selectedKey = roomKey(selectedRoom);
+    const nextRooms = rooms.map((room) =>
+      roomKey(room) === selectedKey ? nextRoom : room
+    );
     const updatedAt = state.status === "loaded" ? state.data.updatedAt : "";
     setState({ status: "loaded", data: { rooms: nextRooms, updatedAt } });
   };
 
-  const handleAddSlot = () => {
+  const handleAddSlot = (modeName: string) => {
     if (!selectedRoom) return;
-    const activeMode = selectedRoom.modes.find((mode) => mode.name === selectedRoom.activeModeName);
-    if (!activeMode) return;
-    if (activeMode.schedule.length >= 10) return;
-    const nextSchedule = activeMode.schedule.map((block) => ({ ...block }));
+    const targetMode = selectedRoom.modes.find((mode) => mode.name === modeName);
+    if (!targetMode) return;
+    if (targetMode.schedule.length >= 10) return;
+    const nextSchedule = targetMode.schedule.map((block) => ({ ...block }));
     const lastIndex = nextSchedule.length - 1;
     const last = nextSchedule[lastIndex];
     const lastStartMinutes = parseTimeToMinutes(last.start);
@@ -240,20 +249,23 @@ export default function App() {
     const nextRoom: RoomConfig = {
       ...selectedRoom,
       modes: selectedRoom.modes.map((mode) =>
-        mode.name === activeMode.name ? { ...mode, schedule: nextSchedule } : mode
+        mode.name === targetMode.name ? { ...mode, schedule: nextSchedule } : mode
       )
     };
-    const nextRooms = rooms.map((room) => (room.name === nextRoom.name ? nextRoom : room));
+    const selectedKey = roomKey(selectedRoom);
+    const nextRooms = rooms.map((room) =>
+      roomKey(room) === selectedKey ? nextRoom : room
+    );
     const updatedAt = state.status === "loaded" ? state.data.updatedAt : "";
     setState({ status: "loaded", data: { rooms: nextRooms, updatedAt } });
   };
 
-  const handleRemoveSlot = (index: number) => {
+  const handleRemoveSlot = (modeName: string, index: number) => {
     if (!selectedRoom) return;
-    const activeMode = selectedRoom.modes.find((mode) => mode.name === selectedRoom.activeModeName);
-    if (!activeMode) return;
-    if (activeMode.schedule.length <= 1) return;
-    const nextSchedule = activeMode.schedule.map((block) => ({ ...block }));
+    const targetMode = selectedRoom.modes.find((mode) => mode.name === modeName);
+    if (!targetMode) return;
+    if (targetMode.schedule.length <= 1) return;
+    const nextSchedule = targetMode.schedule.map((block) => ({ ...block }));
     const removed = nextSchedule[index];
     nextSchedule.splice(index, 1);
     if (nextSchedule.length === 0) return;
@@ -265,21 +277,22 @@ export default function App() {
     const nextRoom: RoomConfig = {
       ...selectedRoom,
       modes: selectedRoom.modes.map((mode) =>
-        mode.name === activeMode.name ? { ...mode, schedule: nextSchedule } : mode
+        mode.name === targetMode.name ? { ...mode, schedule: nextSchedule } : mode
       )
     };
-    const nextRooms = rooms.map((room) => (room.name === nextRoom.name ? nextRoom : room));
+    const selectedKey = roomKey(selectedRoom);
+    const nextRooms = rooms.map((room) =>
+      roomKey(room) === selectedKey ? nextRoom : room
+    );
     const updatedAt = state.status === "loaded" ? state.data.updatedAt : "";
     setState({ status: "loaded", data: { rooms: nextRooms, updatedAt } });
   };
-  const handleSaveSchedule = async () => {
+  const handleSaveSchedule = async (modeName: string) => {
     if (!selectedRoom) return;
     try {
-      const activeMode = selectedRoom.modes.find(
-        (mode) => mode.name === selectedRoom.activeModeName
-      );
-      if (!activeMode) return;
-      await updateSchedule(selectedRoom.name, activeMode.name, activeMode.schedule);
+      const targetMode = selectedRoom.modes.find((mode) => mode.name === modeName);
+      if (!targetMode) return;
+      await updateSchedule(roomKey(selectedRoom), targetMode.name, targetMode.schedule);
       loadRooms();
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to save schedule";
@@ -287,8 +300,8 @@ export default function App() {
     }
   };
 
-  const handleEditRoom = (roomName: string) => {
-    setSelectedRoomId(roomName);
+  const handleEditRoom = (roomKeyValue: string) => {
+    setSelectedRoomKey(roomKeyValue);
     setShowSettings(true);
   };
 
