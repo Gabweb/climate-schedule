@@ -1,4 +1,8 @@
-import { minuteOfDayInTimeZone, findScheduleBlockAtMinute } from "../../../shared/schedule";
+import {
+  minuteOfDayInTimeZone,
+  findScheduleBlockAtMinute,
+  minutesToTime
+} from "../../../shared/schedule";
 import type { RoomConfig } from "../../../shared/models";
 import { activeScheduleForRoom, validateGranularity, validateScheduleBlocks } from "../schedule";
 import type { ClimateAdapter } from "../adapters/climate";
@@ -22,6 +26,8 @@ export function startScheduler(options: SchedulerOptions) {
   const tick = async () => {
     const roomsFile = loadRoomsFile();
     const nowMinute = minuteOfDayInTimeZone(new Date(), timeZone);
+    const nextRunMinutes = Math.round(intervalMs / 60000);
+    const targetSummary: string[] = [];
 
     for (const room of roomsFile.rooms) {
       try {
@@ -29,7 +35,13 @@ export function startScheduler(options: SchedulerOptions) {
         validateScheduleBlocks(schedule);
         validateGranularity(schedule, 10);
         const block = findScheduleBlockAtMinute(schedule, nowMinute);
-        if (!block) continue;
+        if (!block) {
+          targetSummary.push(`${room.name}: no block`);
+          continue;
+        }
+        targetSummary.push(
+          `${room.name}(${room.activeModeName})=${block.targetC}C ${block.start}-${block.end}`
+        );
 
         for (const entity of room.entities) {
           const key = `${room.name}:${entity.entityId}`;
@@ -41,19 +53,28 @@ export function startScheduler(options: SchedulerOptions) {
             temperatureC: block.targetC
           });
           lastApplied[key] = block.targetC;
+          console.log(
+            `Scheduler applied ${block.targetC}C to ${entity.entityId} (room ${room.name}).`
+          );
         }
         options.mqttService?.publishRoomState(room, block.targetC);
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown scheduler error";
-        console.warn(`Scheduler room ${room.name} error: ${message}`);
+        console.error(`Scheduler room ${room.name} error: ${message}`);
       }
     }
+
+    console.log(
+      `Scheduler tick ${minutesToTime(nowMinute)} (next in ${nextRunMinutes}m) targets: ${targetSummary.join(
+        " | "
+      )}`
+    );
   };
 
   const handle = setInterval(() => {
     tick().catch((error) => {
       const message = error instanceof Error ? error.message : "unknown scheduler error";
-      console.warn(`Scheduler tick error: ${message}`);
+      console.error(`Scheduler tick error: ${message}`);
     });
   }, intervalMs);
 
