@@ -8,6 +8,7 @@ import { activeScheduleForRoom, validateGranularity, validateScheduleBlocks } fr
 import type { ClimateAdapter } from "../adapters/climate";
 import { loadRoomsFile } from "../rooms";
 import type { MqttService } from "../mqtt/service";
+import { roomKey } from "../../../shared/roomKey";
 
 export type SchedulerOptions = {
   adapter: ClimateAdapter;
@@ -36,11 +37,11 @@ export function startScheduler(options: SchedulerOptions) {
         validateGranularity(schedule, 10);
         const block = findScheduleBlockAtMinute(schedule, nowMinute);
         if (!block) {
-          targetSummary.push(`${room.name}: no block`);
+          targetSummary.push(`${roomKey(room)}: no block`);
           continue;
         }
         targetSummary.push(
-          `${room.name}(${room.activeModeName})=${block.targetC}C ${block.start}-${block.end}`
+          `${roomKey(room)}(${room.activeModeName})=${block.targetC}C ${block.start}-${block.end}`
         );
 
         const primaryEntity = room.entities[0]?.entityId;
@@ -50,12 +51,12 @@ export function startScheduler(options: SchedulerOptions) {
             currentTemp = await options.adapter.getCurrentTemperature(primaryEntity);
           } catch (error) {
             const message = error instanceof Error ? error.message : "unknown temperature error";
-            console.warn(`Scheduler room ${room.name} current temp error: ${message}`);
+            console.warn(`Scheduler room ${roomKey(room)} current temp error: ${message}`);
           }
         }
 
         for (const entity of room.entities) {
-          const key = `${room.name}:${entity.entityId}`;
+          const key = `${roomKey(room)}:${entity.entityId}`;
           if (lastApplied[key] === block.targetC) {
             continue;
           }
@@ -65,13 +66,13 @@ export function startScheduler(options: SchedulerOptions) {
           });
           lastApplied[key] = block.targetC;
           console.log(
-            `Scheduler applied ${block.targetC}C to ${entity.entityId} (room ${room.name}).`
+            `Scheduler applied ${block.targetC}C to ${entity.entityId} (room ${roomKey(room)}).`
           );
         }
         options.mqttService?.publishRoomState(room, block.targetC, currentTemp);
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown scheduler error";
-        console.error(`Scheduler room ${room.name} error: ${message}`);
+        console.error(`Scheduler room ${roomKey(room)} error: ${message}`);
       }
     }
 

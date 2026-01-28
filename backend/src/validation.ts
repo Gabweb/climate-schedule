@@ -1,4 +1,5 @@
 import type { RoomConfig, RoomsFile } from "../../shared/models";
+import { roomKey } from "../../shared/roomKey";
 import { validateGranularity, validateScheduleBlocks } from "../../shared/schedule";
 
 const FLOOR_LEVELS = new Set(["UG", "EG", "1OG", "2OG"]);
@@ -27,6 +28,15 @@ export function validateRoomsFile(data: unknown): RoomsFile {
   }
 
   rooms.forEach((room, index) => validateRoom(room, index));
+
+  const keys = new Set<string>();
+  rooms.forEach((room) => {
+    const key = roomKey(room);
+    if (keys.has(key)) {
+      throw new Error("rooms must be unique by floor and name");
+    }
+    keys.add(key);
+  });
 
   return data as RoomsFile;
 }

@@ -1,11 +1,12 @@
 import { Empty, Row, Col } from "antd";
 import type { RoomConfig } from "../../../shared/models";
+import { roomKey } from "../../../shared/roomKey";
 import RoomCard from "./RoomCard";
 
 export type RoomListProps = {
   rooms: RoomConfig[];
-  onEditRoom: (roomId: string) => void;
-  onSetActiveMode: (roomName: string, modeName: string) => void;
+  onEditRoom: (roomKey: string) => void;
+  onSetActiveMode: (roomKey: string, modeName: string) => void;
   nowMinute: number;
   addRoomNode?: React.ReactNode;
 };
@@ -18,7 +19,16 @@ export default function RoomList({
   addRoomNode
 }: RoomListProps) {
   if (rooms.length === 0) {
-    return <Empty description="No rooms configured" />;
+    return (
+      <Row gutter={[16, 16]}>
+        <Col span={24}>
+          <Empty description="No rooms configured" />
+        </Col>
+        {addRoomNode ? (
+          <Col span={24}>{addRoomNode}</Col>
+        ) : null}
+      </Row>
+    );
   }
 
   const ordered = [...rooms].sort((a, b) => {
@@ -34,7 +44,7 @@ export default function RoomList({
   return (
     <Row gutter={[16, 16]}>
       {ordered.map((room) => (
-        <Col key={room.name} xs={24} sm={12} lg={8}>
+        <Col key={roomKey(room)} xs={24} sm={12} lg={8}>
           <RoomCard
             room={room}
             onEditRoom={onEditRoom}

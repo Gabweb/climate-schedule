@@ -5,6 +5,7 @@ import path from "path";
 import request from "supertest";
 import { createApp } from "../src/app";
 import type { RoomsFile } from "../../shared/models";
+import { roomKey } from "../../shared/roomKey";
 
 function tempDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "climate-schedule-"));
@@ -55,9 +56,10 @@ describe("rooms endpoints", () => {
   it("PUT /api/rooms/:id replaces room", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .put("/api/rooms/Living")
+      .put(`/api/rooms/${livingKey}`)
       .send({
         name: "Living Updated",
         floor: "EG",
@@ -82,9 +84,10 @@ describe("rooms endpoints", () => {
   it("PUT /api/rooms/:id returns 400 for invalid floor", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .put("/api/rooms/Living")
+      .put(`/api/rooms/${livingKey}`)
       .send({
         name: "Living",
         floor: "BAD",
@@ -108,8 +111,9 @@ describe("rooms endpoints", () => {
   it("DELETE /api/rooms/:id deletes room", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
-    const response = await request(app).delete("/api/rooms/Living");
+    const response = await request(app).delete(`/api/rooms/${livingKey}`);
 
     expect(response.status).toBe(204);
   });
@@ -117,9 +121,10 @@ describe("rooms endpoints", () => {
   it("POST /api/rooms/:id/modes creates a mode", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .post("/api/rooms/Living/modes")
+      .post(`/api/rooms/${livingKey}/modes`)
       .send({ name: "Guest" });
 
     expect(response.status).toBe(201);
@@ -129,9 +134,10 @@ describe("rooms endpoints", () => {
   it("POST /api/rooms/:id/modes rejects duplicate name", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .post("/api/rooms/Living/modes")
+      .post(`/api/rooms/${livingKey}/modes`)
       .send({ name: "Default" });
 
     expect(response.status).toBe(400);
@@ -140,8 +146,9 @@ describe("rooms endpoints", () => {
   it("DELETE /api/rooms/:id/modes/:modeId deletes a mode", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
-    const response = await request(app).delete("/api/rooms/Living/modes/Holiday");
+    const response = await request(app).delete(`/api/rooms/${livingKey}/modes/Holiday`);
 
     expect(response.status).toBe(204);
   });
@@ -149,9 +156,10 @@ describe("rooms endpoints", () => {
   it("DELETE /api/rooms/:id/modes/:modeId rejects deleting last mode", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
-    await request(app).delete("/api/rooms/Living/modes/Holiday");
-    const response = await request(app).delete("/api/rooms/Living/modes/Default");
+    await request(app).delete(`/api/rooms/${livingKey}/modes/Holiday`);
+    const response = await request(app).delete(`/api/rooms/${livingKey}/modes/Default`);
 
     expect(response.status).toBe(400);
   });
@@ -159,9 +167,10 @@ describe("rooms endpoints", () => {
   it("PATCH /api/rooms/:id/active-mode updates active mode", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .patch("/api/rooms/Living/active-mode")
+      .patch(`/api/rooms/${livingKey}/active-mode`)
       .send({ activeModeName: "Holiday" });
 
     expect(response.status).toBe(200);
@@ -171,9 +180,10 @@ describe("rooms endpoints", () => {
   it("PATCH /api/rooms/:id/active-mode rejects unknown mode", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .patch("/api/rooms/Living/active-mode")
+      .patch(`/api/rooms/${livingKey}/active-mode`)
       .send({ activeModeName: "Unknown" });
 
     expect(response.status).toBe(400);
@@ -182,9 +192,10 @@ describe("rooms endpoints", () => {
   it("PUT /api/rooms/:id/modes/:modeId/schedule replaces schedule", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .put("/api/rooms/Living/modes/Holiday/schedule")
+      .put(`/api/rooms/${livingKey}/modes/Holiday/schedule`)
       .send({
         schedule: [
           { start: "00:00", end: "10:00", targetC: 17 },
@@ -200,9 +211,10 @@ describe("rooms endpoints", () => {
   it("PUT /api/rooms/:id/modes/:modeId/schedule rejects gaps", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .put("/api/rooms/Living/modes/Default/schedule")
+      .put(`/api/rooms/${livingKey}/modes/Default/schedule`)
       .send({
         schedule: [
           { start: "00:00", end: "08:00", targetC: 19 },
@@ -216,9 +228,10 @@ describe("rooms endpoints", () => {
   it("PUT /api/rooms/:id/modes/:modeId/schedule rejects invalid granularity", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .put("/api/rooms/Living/modes/Default/schedule")
+      .put(`/api/rooms/${livingKey}/modes/Default/schedule`)
       .send({
         schedule: [
           { start: "00:05", end: "08:00", targetC: 19 },
@@ -232,9 +245,10 @@ describe("rooms endpoints", () => {
   it("PUT /api/rooms/:id renames room by name field", async () => {
     seedRooms(process.env.DATA_DIR!);
     const app = createApp({ publicDir: tempDir() });
+    const livingKey = roomKey({ floor: "EG", name: "Living" });
 
     const response = await request(app)
-      .put("/api/rooms/Living")
+      .put(`/api/rooms/${livingKey}`)
       .send({
         name: "Living Room",
         floor: "EG",
