@@ -6,7 +6,8 @@ export type DiscoveryConfig = {
   presetModes: string[];
   baseTopic: string;
   currentTemperatureTopic: string;
-  temperatureStateTopic: string;
+  tempStateTopic: string;
+  tempCommandTopic: string;
   presetModeStateTopic: string;
   presetModeCommandTopic: string;
   availabilityTopic: string;
@@ -30,7 +31,8 @@ export function buildDiscoveryConfig(room: RoomConfig): DiscoveryConfig {
     presetModes: room.modes.map((mode) => mode.name),
     baseTopic: base,
     currentTemperatureTopic: `${base}/state/current_temperature`,
-    temperatureStateTopic: `${base}/state/target_temperature`,
+    tempStateTopic: `${base}/state/target_temperature`,
+    tempCommandTopic: `${base}/command/target_temperature`,
     presetModeStateTopic: `${base}/state/preset`,
     presetModeCommandTopic: `${base}/command/preset`,
     availabilityTopic: `${base}/availability`,
@@ -49,7 +51,8 @@ export function discoveryPayload(config: DiscoveryConfig): Record<string, unknow
     preset_modes: config.presetModes,
     preset_mode_state_topic: config.presetModeStateTopic,
     preset_mode_command_topic: config.presetModeCommandTopic,
-    temperature_state_topic: config.temperatureStateTopic,
+    temp_state_topic: config.tempStateTopic,
+    temp_command_topic: config.tempCommandTopic,
     current_temperature_topic: config.currentTemperatureTopic,
     availability_topic: config.availabilityTopic,
     modes: ["heat"],
