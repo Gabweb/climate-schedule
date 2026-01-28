@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Divider, Drawer, Layout, Typography, message } from "antd";
+import { Button, Card, Drawer, Layout, Typography, message } from "antd";
+import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
 import type { RoomConfig, RoomsFile, ScheduleBlock } from "../../shared/models";
 import { minuteOfDayInTimeZone, minutesToTime, parseTimeToMinutes } from "../../shared/schedule";
 import RoomList from "./components/RoomList";
@@ -30,6 +31,7 @@ export default function App() {
     floor: "EG",
     entityId: ""
   });
+  const [showAddRoom, setShowAddRoom] = useState(false);
   const [modeDraft, setModeDraft] = useState<ModeDraft>({ name: "" });
   const [roomEditDraft, setRoomEditDraft] = useState<RoomEditDraft>({
     name: "",
@@ -162,6 +164,31 @@ export default function App() {
     }
   };
 
+  const handleRenameMode = async (roomName: string, modeName: string, nextName: string) => {
+    if (!selectedRoom) return;
+    const trimmed = nextName.trim();
+    if (!trimmed) return;
+    if (selectedRoom.modes.some((mode) => mode.name === trimmed)) {
+      message.error("Mode name already exists.");
+      return;
+    }
+    try {
+      const nextRoom: RoomConfig = {
+        ...selectedRoom,
+        activeModeName:
+          selectedRoom.activeModeName === modeName ? trimmed : selectedRoom.activeModeName,
+        modes: selectedRoom.modes.map((mode) =>
+          mode.name === modeName ? { ...mode, name: trimmed } : mode
+        )
+      };
+      await updateRoom(roomName, nextRoom);
+      loadRooms();
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : "Failed to rename mode";
+      message.error(messageText);
+    }
+  };
+
   const handleScheduleChange = (index: number, key: keyof ScheduleBlock, value: string | number) => {
     if (!selectedRoom) return;
     const activeMode = selectedRoom.modes.find((mode) => mode.name === selectedRoom.activeModeName);
@@ -265,45 +292,52 @@ export default function App() {
     setShowSettings(true);
   };
 
-  const handleEditSchedule = (roomName: string) => {
-    setSelectedRoomId(roomName);
-    setShowSettings(true);
-  };
-
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Layout.Header
-        style={{
-          background: "#ffffff",
-          borderBottom: "1px solid #f0f0f0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 24px"
-        }}
-      >
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            Climate Schedule
-          </Typography.Title>
-        </div>
-      </Layout.Header>
-
       <Layout.Content style={{ padding: "24px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
         {state.status === "loading" && <Typography.Text>Loading rooms…</Typography.Text>}
         {state.status === "error" && <Typography.Text>Failed: {state.message}</Typography.Text>}
 
         {state.status === "loaded" && (
-          <>
-            <RoomList
-              rooms={rooms}
-              onEditRoom={handleEditRoom}
-              onEditSchedule={handleEditSchedule}
-              nowMinute={nowMinute}
-            />
-            <Divider />
-            <AddRoomForm draft={roomDraft} onChange={setRoomDraft} onSubmit={handleCreateRoom} />
-          </>
+          <RoomList
+            rooms={rooms}
+            onEditRoom={handleEditRoom}
+            onSetActiveMode={handleSetActiveMode}
+            nowMinute={nowMinute}
+            addRoomNode={
+              !showAddRoom ? (
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={() => setShowAddRoom(true)}
+                  style={{ width: "100%" }}
+                >
+                  Add room
+                </Button>
+              ) : (
+                <Card
+                  title="Add room"
+                  size="small"
+                  style={{ width: "100%" }}
+                  extra={
+                    <Button
+                      type="text"
+                      icon={<CloseOutlined />}
+                      aria-label="Collapse add room"
+                      onClick={() => setShowAddRoom(false)}
+                    />
+                  }
+                >
+                  <AddRoomForm
+                    draft={roomDraft}
+                    onChange={setRoomDraft}
+                    onSubmit={handleCreateRoom}
+                    showTitle={false}
+                  />
+                </Card>
+              )
+            }
+          />
         )}
       </Layout.Content>
 
@@ -315,16 +349,16 @@ export default function App() {
         open={showSettings}
       >
         {state.status === "loaded" && (
-            <SettingsPanel
+          <SettingsPanel
             room={selectedRoom}
             modeDraft={modeDraft}
             roomEditDraft={roomEditDraft}
             onModeDraftChange={setModeDraft}
             onRoomEditDraftChange={setRoomEditDraft}
             onSaveRoom={handleSaveRoom}
-            onSetActiveMode={handleSetActiveMode}
             onCreateMode={handleCreateMode}
             onDeleteMode={handleDeleteMode}
+            onRenameMode={handleRenameMode}
             onScheduleChange={handleScheduleChange}
             onAddSlot={handleAddSlot}
             onRemoveSlot={handleRemoveSlot}

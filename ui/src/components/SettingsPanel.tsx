@@ -1,4 +1,16 @@
-import { Button, Divider, Form, Input, InputNumber, Select, Table, Typography } from "antd";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Button,
+  Divider,
+  Form,
+  Input,
+  InputNumber,
+  Popconfirm,
+  Select,
+  Table,
+  Tabs,
+  Typography
+} from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { RoomConfig, ScheduleBlock } from "../../../shared/models";
 import { parseTimeToMinutes } from "../../../shared/schedule";
@@ -20,9 +32,9 @@ type SettingsPanelProps = {
   onModeDraftChange: (draft: ModeDraft) => void;
   onRoomEditDraftChange: (draft: RoomEditDraft) => void;
   onSaveRoom: (roomId: string) => void;
-  onSetActiveMode: (roomName: string, modeName: string) => void;
   onCreateMode: (roomName: string) => void;
   onDeleteMode: (roomName: string, modeName: string) => void;
+  onRenameMode: (roomName: string, modeName: string, nextName: string) => void;
   onScheduleChange: (index: number, key: keyof ScheduleBlock, value: string | number) => void;
   onAddSlot: () => void;
   onRemoveSlot: (index: number) => void;
@@ -38,17 +50,52 @@ export default function SettingsPanel({
   onModeDraftChange,
   onRoomEditDraftChange,
   onSaveRoom,
-  onSetActiveMode,
   onCreateMode,
   onDeleteMode,
+  onRenameMode,
   onScheduleChange,
   onAddSlot,
   onRemoveSlot,
   onSaveSchedule
 }: SettingsPanelProps) {
-  const activeMode = room?.modes.find((mode) => mode.name === room.activeModeName) ?? null;
-  const schedule = activeMode?.schedule ?? [];
+  const [activeTab, setActiveTab] = useState<string | null>(room?.activeModeName ?? null);
+  const selectedMode = room?.modes.find((mode) => mode.name === activeTab) ?? null;
+  const [modeNameDraft, setModeNameDraft] = useState("");
+  const renameTimerRef = useRef<number | null>(null);
+  const schedule = selectedMode?.schedule ?? [];
   const lastIndex = schedule.length - 1;
+
+  useEffect(() => {
+    const initial = room?.modes[0]?.name ?? null;
+    setActiveTab(initial);
+    setModeNameDraft(
+      room?.modes.find((mode) => mode.name === initial)?.name ?? ""
+    );
+  }, [room?.name]);
+
+  useEffect(() => {
+    setModeNameDraft(selectedMode?.name ?? "");
+  }, [selectedMode?.name]);
+
+  useEffect(() => {
+    if (!room || !selectedMode) return;
+    if (!modeNameDraft.trim()) return;
+    if (modeNameDraft.trim() === selectedMode.name) return;
+    if (renameTimerRef.current) {
+      window.clearTimeout(renameTimerRef.current);
+    }
+    renameTimerRef.current = window.setTimeout(() => {
+      const nextName = modeNameDraft.trim();
+      if (!nextName) return;
+      onRenameMode(room.name, selectedMode.name, nextName);
+      setActiveTab(nextName);
+    }, 1000);
+    return () => {
+      if (renameTimerRef.current) {
+        window.clearTimeout(renameTimerRef.current);
+      }
+    };
+  }, [modeNameDraft, onRenameMode, room, selectedMode]);
 
   const getStartInvalid = (index: number): boolean => {
     const block = schedule[index];
@@ -83,6 +130,24 @@ export default function SettingsPanel({
       return true;
     }
   };
+
+  const modeTabs = useMemo(() => {
+    if (!room) return [];
+    return [
+      ...room.modes.map((mode) => ({
+        key: mode.name,
+        label: mode.name
+      })),
+      {
+        key: "__add__",
+        label: (
+          <>
+            <PlusOutlined /> Add mode
+          </>
+        )
+      }
+    ];
+  }, [room]);
 
   return (
     <div>
@@ -121,51 +186,48 @@ export default function SettingsPanel({
 
       <Divider />
 
-      <Typography.Title level={4}>Modes</Typography.Title>
+      <Typography.Title level={4}>Modes & schedules</Typography.Title>
       {!room && <Typography.Text>Select a room to edit modes.</Typography.Text>}
       {room && (
+        <Tabs
+          activeKey={activeTab ?? undefined}
+          items={modeTabs}
+          onChange={(key) => {
+            setActiveTab(key);
+          }}
+        />
+      )}
+
+      {room && activeTab === "__add__" && (
+        <Form layout="vertical">
+          <Form.Item label="Mode name">
+            <Input
+              placeholder="holiday"
+              value={modeDraft.name}
+              onChange={(event) => onModeDraftChange({ ...modeDraft, name: event.target.value })}
+            />
+          </Form.Item>
+          <Button type="primary" onClick={() => onCreateMode(room.name)}>
+            Add mode
+          </Button>
+        </Form>
+      )}
+
+      {selectedMode && activeTab !== "__add__" && (
         <>
-          <div style={{ display: "grid", gap: 8 }}>
-            {room.modes.map((mode) => (
-              <div key={mode.name}>
-                <Button
-                  type={mode.name === room.activeModeName ? "primary" : "text"}
-                  onClick={() => onSetActiveMode(room.name, mode.name)}
-                >
-                  {mode.name}
-                </Button>
-                <Button danger type="link" onClick={() => onDeleteMode(room.name, mode.name)}>
-                  Delete
-                </Button>
-              </div>
-            ))}
-          </div>
-          <Divider />
-          <Typography.Title level={5}>Add mode</Typography.Title>
           <Form layout="vertical">
             <Form.Item label="Mode name">
               <Input
-                placeholder="holiday"
-                value={modeDraft.name}
-                onChange={(event) => onModeDraftChange({ ...modeDraft, name: event.target.value })}
+                value={modeNameDraft}
+                onChange={(event) => setModeNameDraft(event.target.value)}
               />
             </Form.Item>
-            <Button type="primary" onClick={() => onCreateMode(room.name)}>
-              Add mode
-            </Button>
           </Form>
-        </>
-      )}
-
-      <Divider />
-
-      <Typography.Title level={4}>Active mode schedule</Typography.Title>
-      {!activeMode && <Typography.Text>Select a room to edit its schedule.</Typography.Text>}
-      {activeMode && (
-        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          </div>
           <Table
             pagination={false}
-            dataSource={activeMode.schedule.map((block, index) => ({
+            dataSource={selectedMode.schedule.map((block, index) => ({
               key: `${block.start}-${index}`,
               index,
               ...block
@@ -221,7 +283,7 @@ export default function SettingsPanel({
                     type="text"
                     icon={<MinusCircleOutlined />}
                     onClick={() => onRemoveSlot(record.index)}
-                    disabled={activeMode.schedule.length <= 1}
+                    disabled={selectedMode.schedule.length <= 1}
                     aria-label="Remove time slot"
                   />
                 )
@@ -232,13 +294,24 @@ export default function SettingsPanel({
             <Button
               icon={<PlusOutlined />}
               onClick={onAddSlot}
-              disabled={activeMode.schedule.length >= 10}
+              disabled={selectedMode.schedule.length >= 10}
             >
               Add slot
             </Button>
             <Button type="primary" onClick={onSaveSchedule}>
               Save schedule
             </Button>
+            <Popconfirm
+              title="Delete this mode?"
+              okText="Yes"
+              cancelText="No"
+              onConfirm={() => onDeleteMode(room.name, selectedMode.name)}
+              disabled={room.modes.length <= 1}
+            >
+              <Button danger disabled={room.modes.length <= 1}>
+                Delete mode
+              </Button>
+            </Popconfirm>
           </div>
         </>
       )}

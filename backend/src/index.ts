@@ -43,6 +43,8 @@ async function main() {
         }
       });
     }
+  } else {
+    console.warn("MQTT disabled (MQTT_URL not set).");
   }
 
   const roomsFile = loadRoomsFile();

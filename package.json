@@ -1,0 +1,11 @@
+{
+  "name": "climate-schedule",
+  "private": true,
+  "scripts": {
+    "docker:build:local": "docker build -f Dockerfile.local -t climate-schedule:local .",
+    "docker:run:local": "docker rm -f climate-schedule-local >/dev/null 2>&1 || true && docker run -d --rm --name climate-schedule-local -p 3001:3001 -e HA_BASE_URL -e HA_TOKEN -v climate-schedule-data:/data climate-schedule:local",
+    "docker:stop:local": "docker stop climate-schedule-local",
+    "stop": "npm run docker:stop:local",
+    "deploy": "npm run docker:build:local && npm run docker:run:local"
+  }
+}
