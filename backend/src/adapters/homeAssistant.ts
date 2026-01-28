@@ -33,6 +33,23 @@ export class HomeAssistantClimateAdapter implements ClimateAdapter {
       throw new Error(`HA service call failed: ${response.status} ${body}`);
     }
   }
+
+  async getCurrentTemperature(entityId: string): Promise<number | null> {
+    const url = `${this.baseUrl}/api/states/${encodeURIComponent(entityId)}`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json"
+      }
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`HA state fetch failed: ${response.status} ${body}`);
+    }
+    const data = (await response.json()) as { attributes?: { current_temperature?: number } };
+    const current = data?.attributes?.current_temperature;
+    return typeof current === "number" ? current : null;
+  }
 }
 
 export function createHomeAssistantAdapterFromEnv(): ClimateAdapter {

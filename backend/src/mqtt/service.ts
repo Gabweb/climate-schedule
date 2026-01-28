@@ -17,7 +17,11 @@ export type MqttService = {
   initializeRooms: (rooms: RoomConfig[]) => void;
   publishDiscovery: (room: RoomConfig, options?: { force?: boolean }) => void;
   removeDiscovery: (room: RoomConfig) => void;
-  publishRoomState: (room: RoomConfig, targetTemperature: number) => void;
+  publishRoomState: (
+    room: RoomConfig,
+    targetTemperature: number,
+    currentTemperature?: number | null
+  ) => void;
   waitForConnection: (timeoutMs?: number) => Promise<void>;
 };
 
@@ -62,14 +66,20 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
     publishedDiscovery.delete(uniqueId);
   };
 
-  const publishRoomState = (room: RoomConfig, targetTemperature: number) => {
+  const publishRoomState = (
+    room: RoomConfig,
+    targetTemperature: number,
+    currentTemperature?: number | null
+  ) => {
     const config = buildDiscoveryConfig(room);
     console.log(
       `MQTT: Updating "${room.name}" to target temp ${targetTemperature}C (preset "${room.activeModeName}").`
     );
     client.publish(config.presetModeStateTopic, room.activeModeName, { retain: true });
     client.publish(config.tempStateTopic, String(targetTemperature), { retain: true });
-    client.publish(config.currentTemperatureTopic, "20", { retain: true });
+    if (typeof currentTemperature === "number") {
+      client.publish(config.currentTemperatureTopic, String(currentTemperature), { retain: true });
+    }
     client.publish(config.modeStateTopic, "heat", { retain: true });
   };
 

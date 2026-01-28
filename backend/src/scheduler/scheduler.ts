@@ -43,6 +43,17 @@ export function startScheduler(options: SchedulerOptions) {
           `${room.name}(${room.activeModeName})=${block.targetC}C ${block.start}-${block.end}`
         );
 
+        const primaryEntity = room.entities[0]?.entityId;
+        let currentTemp: number | null = null;
+        if (primaryEntity) {
+          try {
+            currentTemp = await options.adapter.getCurrentTemperature(primaryEntity);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "unknown temperature error";
+            console.warn(`Scheduler room ${room.name} current temp error: ${message}`);
+          }
+        }
+
         for (const entity of room.entities) {
           const key = `${room.name}:${entity.entityId}`;
           if (lastApplied[key] === block.targetC) {
@@ -57,7 +68,7 @@ export function startScheduler(options: SchedulerOptions) {
             `Scheduler applied ${block.targetC}C to ${entity.entityId} (room ${room.name}).`
           );
         }
-        options.mqttService?.publishRoomState(room, block.targetC);
+        options.mqttService?.publishRoomState(room, block.targetC, currentTemp);
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown scheduler error";
         console.error(`Scheduler room ${room.name} error: ${message}`);
