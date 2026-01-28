@@ -11,14 +11,20 @@ type AddRoomFormProps = {
   draft: RoomDraft;
   onChange: (draft: RoomDraft) => void;
   onSubmit: () => void;
+  showTitle?: boolean;
 };
 
 const floors: RoomConfig["floor"][] = ["UG", "EG", "1OG", "2OG"];
 
-export default function AddRoomForm({ draft, onChange, onSubmit }: AddRoomFormProps) {
+export default function AddRoomForm({
+  draft,
+  onChange,
+  onSubmit,
+  showTitle = true
+}: AddRoomFormProps) {
   return (
     <div>
-      <Typography.Title level={4}>Add room</Typography.Title>
+      {showTitle ? <Typography.Title level={4}>Add room</Typography.Title> : null}
       <Form layout="vertical">
         <Form.Item label="Name">
           <Input

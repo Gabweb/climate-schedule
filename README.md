@@ -6,22 +6,14 @@ Note: this codebase is AI-generated.
 
 ## Local Docker (quick)
 
-Build:
+Set Home Assistant env vars (required for calling services):
 ```sh
-docker build -t climate-schedule:dev .
+export HA_BASE_URL="http://homeassistant.local:8123"
+export HA_TOKEN="YOUR_LONG_LIVED_ACCESS_TOKEN"
 ```
+Leave `MQTT_URL` unset to disable MQTT locally. 
 
-Run:
 ```sh
-docker run -d --rm --name climate-schedule -p 3001:3001 climate-schedule:dev
-```
-
-Check API:
-```sh
-curl -s http://localhost:3001/api/hello
-```
-
-Stop:
-```sh
-docker stop climate-schedule
+npm run stop
+npm run deploy
 ```
