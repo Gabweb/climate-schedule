@@ -66,7 +66,7 @@ async function main() {
 
   const haConfig = getHomeAssistantConfigFromEnv();
   if (!haConfig) {
-    console.warn("Startup check: Home Assistant credentials not set, skipping entity validation.");
+    console.warn("Startup check: Home Assistant adapter not configured.");
   } else {
     const entityIds = roomsFile.rooms.flatMap((room) =>
       room.entities.map((entity) => entity.entityId)
@@ -95,10 +95,11 @@ async function main() {
   });
 
   try {
-    const adapter =
-      process.env.HA_BASE_URL && process.env.HA_TOKEN
-        ? createHomeAssistantAdapterFromEnv()
-        : createNoopAdapter();
+    const haConfig = getHomeAssistantConfigFromEnv();
+    const adapter = haConfig ? createHomeAssistantAdapterFromEnv() : createNoopAdapter();
+    if (!haConfig) {
+      console.warn("Home Assistant adapter not configured; using noop adapter.");
+    }
     startScheduler({ adapter, mqttService });
     console.log("scheduler started");
   } catch (error) {

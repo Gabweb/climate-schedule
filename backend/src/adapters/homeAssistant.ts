@@ -61,12 +61,13 @@ export function createHomeAssistantAdapterFromEnv(): ClimateAdapter {
 }
 
 export function getHomeAssistantConfigFromEnv(): HomeAssistantConfig | null {
-  const baseUrl = process.env.HA_BASE_URL ?? "http://supervisor/core";
-  const token = process.env.HA_TOKEN ?? process.env.SUPERVISOR_TOKEN;
-  if (!baseUrl || !token) {
-    return null;
+  if (process.env.SUPERVISOR_TOKEN) {
+    return { baseUrl: "http://supervisor/core", token: process.env.SUPERVISOR_TOKEN };
   }
-  return { baseUrl, token };
+  if (process.env.HA_BASE_URL && process.env.HA_TOKEN) {
+    return { baseUrl: process.env.HA_BASE_URL, token: process.env.HA_TOKEN };
+  }
+  return null
 }
 
 export async function validateEntitiesExist(

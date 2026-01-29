@@ -76,10 +76,9 @@ export function startScheduler(options: SchedulerOptions) {
       }
     }
 
+    const summaryLines = targetSummary.map((entry) => `> ${entry}`).join("\n");
     console.log(
-      `Scheduler tick ${minutesToTime(nowMinute)} (next in ${nextRunMinutes}m) targets: ${targetSummary.join(
-        " | "
-      )}`
+      `Scheduler tick ${minutesToTime(nowMinute)} (next in ${nextRunMinutes}m)\n${summaryLines}`
     );
   };
 

@@ -44,7 +44,7 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
     client.publish(discoveryTopic(config.uniqueId), JSON.stringify(payload), { retain: true });
     client.publish(config.availabilityTopic, "online", { retain: true });
     client.publish(config.currentTemperatureTopic, "20", { retain: true });
-    client.publish(config.tempStateTopic, "20", { retain: true });
+    client.publish(config.temperatureStateTopic, "20", { retain: true });
     client.publish(config.modeStateTopic, "heat", { retain: true });
     publishedDiscovery.add(config.uniqueId);
 
@@ -52,13 +52,13 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
       client.subscribe(config.presetModeCommandTopic);
       subscribed.add(config.presetModeCommandTopic);
     }
-    if (!subscribed.has(config.tempCommandTopic)) {
-      client.subscribe(config.tempCommandTopic);
-      subscribed.add(config.tempCommandTopic);
+    if (!subscribed.has(config.temperatureCommandTopic)) {
+      client.subscribe(config.temperatureCommandTopic);
+      subscribed.add(config.temperatureCommandTopic);
     }
     const key = roomKey(room);
     presetTopicToRoom.set(config.presetModeCommandTopic, key);
-    temperatureTopicToRoom.set(config.tempCommandTopic, key);
+    temperatureTopicToRoom.set(config.temperatureCommandTopic, key);
   };
 
   const removeDiscovery = (room: RoomConfig) => {
@@ -78,7 +78,7 @@ export function createMqttService(options: MqttServiceOptions): MqttService {
       `MQTT: Updating "${roomKey(room)}" to target temp ${targetTemperature}C (preset "${room.activeModeName}").`
     );
     client.publish(config.presetModeStateTopic, room.activeModeName, { retain: true });
-    client.publish(config.tempStateTopic, String(targetTemperature), { retain: true });
+    client.publish(config.temperatureStateTopic, String(targetTemperature), { retain: true });
     if (typeof currentTemperature === "number") {
       client.publish(config.currentTemperatureTopic, String(currentTemperature), { retain: true });
     }
