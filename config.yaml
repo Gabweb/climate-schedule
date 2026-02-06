@@ -1,22 +1,18 @@
 name: Climate Schedule
 slug: climate_schedule
 description: Manage climate schedules with a dedicated UI.
-version: 0.1.16
+version: 0.1.17
 arch:
   - amd64
   - aarch64
   - armv7
 startup: services
 init: false
-panel_title: Climate Schedule
-panel_icon: mdi:calendar-clock
-ports_description:
-  3001/tcp: Web UI (direct)
-ports:
-  3001/tcp: 3001
+panel_title: Heizung
+panel_icon: mdi:home-thermometer
+panel_admin: false
 ingress: true
 ingress_port: 3001
-webui: http://[HOST]:[PORT:3001]
 homeassistant_api: true
 options: {}
 schema:
