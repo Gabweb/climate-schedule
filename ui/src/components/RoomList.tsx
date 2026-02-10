@@ -1,5 +1,5 @@
 import { Empty, Row, Col } from "antd";
-import type { RoomConfig } from "../../../shared/models";
+import type { GlobalSettings, RoomConfig } from "../../../shared/models";
 import { roomKey } from "../../../shared/roomKey";
 import RoomCard from "./RoomCard";
 
@@ -9,6 +9,7 @@ export type RoomListProps = {
   onSetActiveMode: (roomKey: string, modeName: string) => void;
   nowMinute: number;
   addRoomNode?: React.ReactNode;
+  settings: GlobalSettings;
 };
 
 export default function RoomList({
@@ -16,7 +17,8 @@ export default function RoomList({
   onEditRoom,
   onSetActiveMode,
   nowMinute,
-  addRoomNode
+  addRoomNode,
+  settings
 }: RoomListProps) {
   if (rooms.length === 0) {
     return (
@@ -50,6 +52,7 @@ export default function RoomList({
             onEditRoom={onEditRoom}
             onSetActiveMode={onSetActiveMode}
             nowMinute={nowMinute}
+            settings={settings}
           />
         </Col>
       ))}

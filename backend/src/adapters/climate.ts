@@ -6,6 +6,7 @@ export type ClimateTarget = {
 export type ClimateAdapter = {
   setTargetTemperature: (target: ClimateTarget) => Promise<void>;
   getCurrentTemperature: (entityId: string) => Promise<number | null>;
+  turnOff: (entityId: string) => Promise<void>;
 };
 
 export function createNoopAdapter(): ClimateAdapter {
@@ -15,6 +16,9 @@ export function createNoopAdapter(): ClimateAdapter {
     },
     async getCurrentTemperature() {
       return null;
+    },
+    async turnOff() {
+      return;
     }
   };
 }

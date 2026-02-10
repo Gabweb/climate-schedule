@@ -1,20 +1,30 @@
 import { Card, List, Space, Tag, Typography, Button, Dropdown } from "antd";
 import { DownOutlined, EditOutlined } from "@ant-design/icons";
-import type { RoomConfig } from "../../../shared/models";
+import type { GlobalSettings, RoomConfig } from "../../../shared/models";
 import { findScheduleBlockAtMinute, isMinuteInBlock } from "../../../shared/schedule";
 import { roomKey } from "../../../shared/roomKey";
+import { applyGlobalTemperatureSettings } from "../../../shared/temperature";
 
 export type RoomCardProps = {
   room: RoomConfig;
   onEditRoom: (roomKey: string) => void;
   onSetActiveMode: (roomKey: string, modeName: string) => void;
   nowMinute: number;
+  settings: GlobalSettings;
 };
 
-export default function RoomCard({ room, onEditRoom, onSetActiveMode, nowMinute }: RoomCardProps) {
+export default function RoomCard({
+  room,
+  onEditRoom,
+  onSetActiveMode,
+  nowMinute,
+  settings
+}: RoomCardProps) {
   const activeMode = room.modes.find((mode) => mode.name === room.activeModeName);
   const activeBlock = activeMode ? findScheduleBlockAtMinute(activeMode.schedule, nowMinute) : null;
-  const currentTarget = activeBlock ? `${activeBlock.targetC}°C` : "—";
+  const currentTarget = activeBlock
+    ? `${applyGlobalTemperatureSettings(activeBlock.targetC, settings)}°C`
+    : "—";
   const modeOptions = room.modes.map((mode) => ({
     key: mode.name,
     label: mode.name
@@ -40,6 +50,7 @@ export default function RoomCard({ room, onEditRoom, onSetActiveMode, nowMinute 
       }
       extra={
         <>
+          <Tag>{currentTarget}</Tag>
           {hasMultipleModes ? (
             <Dropdown
               trigger={["click"]}
@@ -78,7 +89,8 @@ export default function RoomCard({ room, onEditRoom, onSetActiveMode, nowMinute 
                   }}
                 >
                   <Typography.Text>
-                    {block.start}–{block.end} · {block.targetC}°C
+                    {block.start}–{block.end} ·{" "}
+                    {applyGlobalTemperatureSettings(block.targetC, settings)}°C
                   </Typography.Text>
                 </List.Item>
               );

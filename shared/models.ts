@@ -29,3 +29,21 @@ export type RoomsFile = {
   rooms: RoomConfig[];
   updatedAt: string;
 };
+
+export type GlobalSettings = {
+  version: number;
+  holidayModeEnabled: boolean;
+};
+
+export type WaterHeaterMode = {
+  name: string;
+  schedule: ScheduleBlock[];
+};
+
+export type WaterHeaterConfig = {
+  version: number;
+  entityId: string;
+  activeModeName: string;
+  modes: WaterHeaterMode[];
+  updatedAt: string;
+};

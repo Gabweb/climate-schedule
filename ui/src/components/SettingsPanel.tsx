@@ -1,22 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Button,
-  Divider,
-  Form,
-  Input,
-  InputNumber,
-  Popconfirm,
-  Select,
-  Table,
-  TimePicker,
-  Tabs,
-  Typography
-} from "antd";
-import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+import { Button, Divider, Form, Input, Select, Tabs, Typography } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import type { RoomConfig, ScheduleBlock } from "../../../shared/models";
-import { parseTimeToMinutes } from "../../../shared/schedule";
 import { roomKey } from "../../../shared/roomKey";
-import dayjs, { type Dayjs } from "dayjs";
+import ScheduleTable from "./ScheduleTable";
 
 export type ModeDraft = {
   name: string;
@@ -67,20 +54,11 @@ export default function SettingsPanel({
   onSaveSchedule
 }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<string | null>(room?.activeModeName ?? null);
-  const selectedMode = room?.modes.find((mode) => mode.name === activeTab) ?? null;
   const [modeNameDraft, setModeNameDraft] = useState("");
   const renameTimerRef = useRef<number | null>(null);
-  const schedule = selectedMode?.schedule ?? [];
-  const lastIndex = schedule.length - 1;
+
   const roomId = room ? roomKey(room) : null;
-
-  const timeValue = (value: string): Dayjs | null => {
-    const parsed = dayjs(value, "HH:mm");
-    return parsed.isValid() ? parsed : null;
-  };
-
-  const minutesToDisable = (step: number) =>
-    Array.from({ length: 60 }, (_, minute) => minute).filter((minute) => minute % step !== 0);
+  const selectedMode = room?.modes.find((mode) => mode.name === activeTab) ?? null;
 
   useEffect(() => {
     const initial = room?.modes[0]?.name ?? null;
@@ -112,41 +90,7 @@ export default function SettingsPanel({
         window.clearTimeout(renameTimerRef.current);
       }
     };
-  }, [modeNameDraft, onRenameMode, room, selectedMode]);
-
-  const getStartInvalid = (index: number): boolean => {
-    const block = schedule[index];
-    if (!block) return false;
-    try {
-      const startMinutes = parseTimeToMinutes(block.start);
-      const endMinutes = parseTimeToMinutes(block.end);
-      if (index === 0 && block.start !== "00:00") return true;
-      if (startMinutes >= endMinutes) return true;
-      if (startMinutes % 10 !== 0) return true;
-      if (index > 0 && block.start !== schedule[index - 1].end) return true;
-      if (index < lastIndex && block.end !== schedule[index + 1].start) return true;
-      return false;
-    } catch {
-      return true;
-    }
-  };
-
-  const getEndInvalid = (index: number): boolean => {
-    const block = schedule[index];
-    if (!block) return false;
-    try {
-      const startMinutes = parseTimeToMinutes(block.start);
-      const endMinutes = parseTimeToMinutes(block.end);
-      if (startMinutes >= endMinutes) return true;
-      const isLast = index === lastIndex;
-      if (isLast && block.end !== "23:59") return true;
-      if (!isLast && block.end !== schedule[index + 1].start) return true;
-      if (block.end !== "23:59" && endMinutes % 10 !== 0) return true;
-      return false;
-    } catch {
-      return true;
-    }
-  };
+  }, [modeNameDraft, onRenameMode, room, roomId, selectedMode]);
 
   const modeTabs = useMemo(() => {
     if (!room) return [];
@@ -206,13 +150,7 @@ export default function SettingsPanel({
       <Typography.Title level={4}>Modes & schedules</Typography.Title>
       {!room && <Typography.Text>Select a room to edit modes.</Typography.Text>}
       {room && (
-        <Tabs
-          activeKey={activeTab ?? undefined}
-          items={modeTabs}
-          onChange={(key) => {
-            setActiveTab(key);
-          }}
-        />
+        <Tabs activeKey={activeTab ?? undefined} items={modeTabs} onChange={setActiveTab} />
       )}
 
       {room && activeTab === "__add__" && (
@@ -230,134 +168,24 @@ export default function SettingsPanel({
         </Form>
       )}
 
-      {selectedMode && activeTab !== "__add__" && (
+      {room && selectedMode && activeTab !== "__add__" && (
         <>
           <Form layout="vertical">
             <Form.Item label="Mode name">
-              <Input
-                value={modeNameDraft}
-                onChange={(event) => setModeNameDraft(event.target.value)}
-              />
+              <Input value={modeNameDraft} onChange={(event) => setModeNameDraft(event.target.value)} />
             </Form.Item>
           </Form>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          </div>
-          <Table
-            pagination={false}
-            dataSource={selectedMode.schedule.map((block, index) => ({
-              key: `${block.start}-${index}`,
-              index,
-              ...block
-            }))}
-            columns={[
-              {
-                title: "Start",
-                dataIndex: "start",
-                render: (value, record) => (
-                  <TimePicker
-                    format="HH:mm"
-                    value={timeValue(value)}
-                    status={getStartInvalid(record.index) ? "error" : undefined}
-                    onChange={(_, valueString) => {
-                      if (!valueString) return;
-                      onScheduleChange(selectedMode.name, record.index, "start", valueString);
-                    }}
-                    allowClear={false}
-                    showNow={false}
-                    minuteStep={10}
-                    disabled={record.index === 0}
-                    disabledTime={() => ({
-                      disabledMinutes: () => minutesToDisable(10)
-                    })}
-                    style={{ width: "100%" }}
-                  />
-                )
-              },
-              {
-                title: "End",
-                dataIndex: "end",
-                render: (value, record) => (
-                  <TimePicker
-                    format="HH:mm"
-                    value={timeValue(value)}
-                    status={getEndInvalid(record.index) ? "error" : undefined}
-                    onChange={(_, valueString) => {
-                      if (!valueString) return;
-                      onScheduleChange(selectedMode.name, record.index, "end", valueString);
-                    }}
-                    allowClear={false}
-                    showNow={false}
-                    minuteStep={10}
-                    disabledTime={() =>
-                      record.index === lastIndex
-                        ? {}
-                        : {
-                          disabledMinutes: () => minutesToDisable(10)
-                        }
-                    }
-                    disabled={record.index === lastIndex}
-                    style={{ width: "100%" }}
-                  />
-                )
-              },
-              {
-                title: "Target (°C)",
-                dataIndex: "targetC",
-                render: (value, record) => (
-                  <InputNumber
-                    min={5}
-                    max={35}
-                    step={0.5}
-                    value={value}
-                    onChange={(next) =>
-                      onScheduleChange(
-                        selectedMode.name,
-                        record.index,
-                        "targetC",
-                        Number(next ?? value)
-                      )
-                    }
-                  />
-                )
-              },
-              {
-                title: "",
-                dataIndex: "remove",
-                render: (_, record) => (
-                  <Button
-                    type="text"
-                    icon={<MinusCircleOutlined />}
-                    onClick={() => onRemoveSlot(selectedMode.name, record.index)}
-                    disabled={selectedMode.schedule.length <= 1}
-                    aria-label="Remove time slot"
-                  />
-                )
-              }
-            ]}
+
+          <ScheduleTable
+            modeName={selectedMode.name}
+            schedule={selectedMode.schedule}
+            onScheduleChange={onScheduleChange}
+            onAddSlot={onAddSlot}
+            onRemoveSlot={onRemoveSlot}
+            onSaveSchedule={onSaveSchedule}
+            onDeleteMode={() => roomId && onDeleteMode(roomId, selectedMode.name)}
+            canDeleteMode={room.modes.length > 1}
           />
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <Button
-              icon={<PlusOutlined />}
-              onClick={() => onAddSlot(selectedMode.name)}
-              disabled={selectedMode.schedule.length >= 10}
-            >
-              Add slot
-            </Button>
-            <Button type="primary" onClick={() => onSaveSchedule(selectedMode.name)}>
-              Save schedule
-            </Button>
-            <Popconfirm
-              title="Delete this mode?"
-              okText="Yes"
-              cancelText="No"
-              onConfirm={() => roomId && onDeleteMode(roomId, selectedMode.name)}
-              disabled={room.modes.length <= 1}
-            >
-              <Button danger disabled={room.modes.length <= 1}>
-                Delete mode
-              </Button>
-            </Popconfirm>
-          </div>
         </>
       )}
     </div>

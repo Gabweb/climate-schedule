@@ -9,6 +9,8 @@ import { startScheduler } from "./scheduler/scheduler";
 import { createMqttService, type MqttService } from "./mqtt/service";
 import { loadRoomsFile, saveRoomsFile } from "./rooms";
 import { roomKey } from "../../shared/roomKey";
+import { loadWaterHeaterConfig } from "./waterHeater";
+import { setRuntimeStatus } from "./runtimeStatus";
 
 const port = Number(process.env.PORT) || 3001;
 const mqttUrl = process.env.MQTT_URL;
@@ -18,12 +20,14 @@ const mqttPassword = process.env.MQTT_PASSWORD;
 const hasValue = (value?: string) => typeof value === "string" && value.trim().length > 0;
 
 async function main() {
+  let startupSuccessful = true;
   let mqttService: MqttService | undefined;
   if (mqttUrl) {
     if (!hasValue(mqttUrl) || !hasValue(mqttUsername) || !hasValue(mqttPassword)) {
       console.error(
         "MQTT configuration invalid. Ensure MQTT_URL, MQTT_USERNAME, and MQTT_PASSWORD are set."
       );
+      startupSuccessful = false;
     } else {
       mqttService = createMqttService({
         config: {
@@ -51,6 +55,7 @@ async function main() {
   }
 
   const roomsFile = loadRoomsFile();
+  const waterHeater = loadWaterHeaterConfig();
 
   if (mqttService) {
     try {
@@ -59,6 +64,7 @@ async function main() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
       console.error(`Startup check: MQTT connection failed (${message}).`);
+      startupSuccessful = false;
     }
   } else {
     console.warn("Startup check: MQTT not configured, skipping MQTT validation.");
@@ -67,10 +73,14 @@ async function main() {
   const haConfig = getHomeAssistantConfigFromEnv();
   if (!haConfig) {
     console.warn("Startup check: Home Assistant adapter not configured.");
+    startupSuccessful = false;
   } else {
     const entityIds = roomsFile.rooms.flatMap((room) =>
       room.entities.map((entity) => entity.entityId)
     );
+    if (waterHeater.entityId.trim()) {
+      entityIds.push(waterHeater.entityId.trim());
+    }
     if (entityIds.length === 0) {
       console.log("Startup check: no climate entities to validate.");
     } else {
@@ -79,15 +89,19 @@ async function main() {
         console.error(
           `Startup check: missing climate entities: ${result.missing.join(", ")}`
         );
+        startupSuccessful = false;
       }
       if (result.errors.length > 0) {
         console.error(`Startup check: entity validation errors: ${result.errors.join(" | ")}`);
+        startupSuccessful = false;
       }
       if (result.missing.length === 0 && result.errors.length === 0) {
         console.log("Startup check: all climate entities found.");
       }
     }
   }
+
+  setRuntimeStatus({ startupSuccessful });
 
   const app = createApp({ mqttService });
   app.listen(port, () => {

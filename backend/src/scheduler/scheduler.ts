@@ -9,6 +9,10 @@ import type { ClimateAdapter } from "../adapters/climate";
 import { loadRoomsFile } from "../rooms";
 import type { MqttService } from "../mqtt/service";
 import { roomKey } from "../../../shared/roomKey";
+import { loadSettings } from "../settings";
+import { applyGlobalTemperatureSettings } from "../../../shared/temperature";
+import { loadWaterHeaterConfig } from "../waterHeater";
+import { evaluateWaterHeaterAtMinute } from "../../../shared/waterHeater";
 
 export type SchedulerOptions = {
   adapter: ClimateAdapter;
@@ -17,7 +21,7 @@ export type SchedulerOptions = {
   mqttService?: MqttService;
 };
 
-type LastApplied = Record<string, number>;
+type LastApplied = Record<string, string>;
 
 export function startScheduler(options: SchedulerOptions) {
   const timeZone = options.timeZone ?? "Europe/Berlin";
@@ -26,6 +30,7 @@ export function startScheduler(options: SchedulerOptions) {
 
   const tick = async () => {
     const roomsFile = loadRoomsFile();
+    const settings = loadSettings();
     const nowMinute = minuteOfDayInTimeZone(new Date(), timeZone);
     const nextRunMinutes = Math.round(intervalMs / 60000);
     const targetSummary: string[] = [];
@@ -40,8 +45,9 @@ export function startScheduler(options: SchedulerOptions) {
           targetSummary.push(`${roomKey(room)}: no block`);
           continue;
         }
+        const targetC = applyGlobalTemperatureSettings(block.targetC, settings);
         targetSummary.push(
-          `${roomKey(room)}(${room.activeModeName})=${block.targetC}C ${block.start}-${block.end}`
+          `${roomKey(room)}(${room.activeModeName})=${targetC}C ${block.start}-${block.end}`
         );
 
         const primaryEntity = room.entities[0]?.entityId;
@@ -57,23 +63,55 @@ export function startScheduler(options: SchedulerOptions) {
 
         for (const entity of room.entities) {
           const key = `${roomKey(room)}:${entity.entityId}`;
-          if (lastApplied[key] === block.targetC) {
+          if (lastApplied[key] === `temp:${targetC}`) {
             continue;
           }
           await options.adapter.setTargetTemperature({
             entityId: entity.entityId,
-            temperatureC: block.targetC
+            temperatureC: targetC
           });
-          lastApplied[key] = block.targetC;
+          lastApplied[key] = `temp:${targetC}`;
           console.log(
-            `Scheduler applied ${block.targetC}C to ${entity.entityId} (room ${roomKey(room)}).`
+            `Scheduler applied ${targetC}C to ${entity.entityId} (room ${roomKey(room)}).`
           );
         }
-        options.mqttService?.publishRoomState(room, block.targetC, currentTemp);
+        options.mqttService?.publishRoomState(room, targetC, currentTemp);
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown scheduler error";
         console.error(`Scheduler room ${roomKey(room)} error: ${message}`);
       }
+    }
+
+    try {
+      const waterHeater = loadWaterHeaterConfig();
+      if (!waterHeater.entityId) {
+        targetSummary.push("water-heater: no entity configured");
+      } else {
+        const waterHeaterState = evaluateWaterHeaterAtMinute(waterHeater, nowMinute, settings);
+        const key = `water-heater:${waterHeater.entityId}`;
+        if (waterHeaterState.isOff) {
+          targetSummary.push(`water-heater(${waterHeater.activeModeName})=OFF`);
+          if (lastApplied[key] !== "off") {
+            await options.adapter.turnOff(waterHeater.entityId);
+            lastApplied[key] = "off";
+            console.log(`Scheduler turned off water heater ${waterHeater.entityId}.`);
+          }
+        } else if (typeof waterHeaterState.temperatureC === "number") {
+          const targetC = waterHeaterState.temperatureC;
+          targetSummary.push(`water-heater(${waterHeater.activeModeName})=${targetC}C`);
+          if (lastApplied[key] !== `temp:${targetC}`) {
+            await options.adapter.setTargetTemperature({
+              entityId: waterHeater.entityId,
+              temperatureC: targetC
+            });
+            lastApplied[key] = `temp:${targetC}`;
+            console.log(`Scheduler applied ${targetC}C to water heater ${waterHeater.entityId}.`);
+          }
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown water heater error";
+      console.error(`Scheduler water heater error: ${message}`);
     }
 
     const summaryLines = targetSummary.map((entry) => `> ${entry}`).join("\n");

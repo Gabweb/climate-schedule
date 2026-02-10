@@ -50,6 +50,22 @@ export class HomeAssistantClimateAdapter implements ClimateAdapter {
     const current = data?.attributes?.current_temperature;
     return typeof current === "number" ? current : null;
   }
+
+  async turnOff(entityId: string): Promise<void> {
+    const url = `${this.baseUrl}/api/services/climate/turn_off`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ entity_id: entityId })
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`HA turn_off failed: ${response.status} ${body}`);
+    }
+  }
 }
 
 export function createHomeAssistantAdapterFromEnv(): ClimateAdapter {
