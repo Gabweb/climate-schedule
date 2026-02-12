@@ -36,22 +36,21 @@ export default function App() {
               </Space>
             </Card>
 
-            <Card size="small" style={{ marginBottom: 16 }}>
-              <WaterHeaterCard
-                config={state.waterHeater}
-                settings={state.settings}
-                nowMinute={state.nowMinute}
-                onEdit={() => state.setShowWaterHeaterSettings(true)}
-                onSetActiveMode={state.handleSetWaterHeaterActiveMode}
-              />
-            </Card>
-
             <RoomList
               rooms={state.rooms}
               onEditRoom={state.handleEditRoom}
               onSetActiveMode={state.handleSetActiveMode}
               nowMinute={state.nowMinute}
               settings={state.settings}
+              leadingNode={
+                <WaterHeaterCard
+                  config={state.waterHeater}
+                  settings={state.settings}
+                  nowMinute={state.nowMinute}
+                  onEdit={() => state.setShowWaterHeaterSettings(true)}
+                  onSetActiveMode={state.handleSetWaterHeaterActiveMode}
+                />
+              }
               addRoomNode={
                 !state.showAddRoom ? (
                   <Button

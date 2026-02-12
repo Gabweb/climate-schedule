@@ -19,6 +19,7 @@ describe("water heater endpoints", () => {
     const response = await request(app).get("/api/water-heater");
     expect(response.status).toBe(200);
     expect(response.body.activeModeName).toBe("Default");
+    expect(response.body.heatingTemperatureC).toBe(55);
     expect(response.body.modes).toHaveLength(1);
   });
 
@@ -42,12 +43,12 @@ describe("water heater endpoints", () => {
       .put("/api/water-heater/modes/Default/schedule")
       .send({
         schedule: [
-          { start: "00:00", end: "08:00", targetC: 0 },
-          { start: "08:00", end: "20:00", targetC: 50 },
-          { start: "20:00", end: "23:59", targetC: 0 }
+          { start: "00:00", end: "08:00", enabled: false },
+          { start: "08:00", end: "20:00", enabled: true },
+          { start: "20:00", end: "23:59", enabled: false }
         ]
       });
     expect(response.status).toBe(200);
-    expect(response.body.schedule[1].targetC).toBe(50);
+    expect(response.body.schedule[1].enabled).toBe(true);
   });
 });

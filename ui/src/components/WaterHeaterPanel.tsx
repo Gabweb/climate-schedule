@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Form, Input, Tabs, Typography } from "antd";
+import { Button, Form, Input, InputNumber, Tabs, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import type { ScheduleBlock, WaterHeaterConfig } from "../../../shared/models";
-import ScheduleTable from "./ScheduleTable";
+import type { WaterHeaterConfig, WaterHeaterScheduleBlock } from "../../../shared/models";
+import WaterHeaterScheduleTable from "./WaterHeaterScheduleTable";
 
 type ModeDraft = {
   name: string;
@@ -12,15 +12,15 @@ type WaterHeaterPanelProps = {
   config: WaterHeaterConfig;
   modeDraft: ModeDraft;
   onModeDraftChange: (draft: ModeDraft) => void;
-  onSaveConfig: (entityId: string) => Promise<void>;
+  onSaveConfig: (entityId: string, heatingTemperatureC: number) => Promise<void>;
   onCreateMode: (name: string) => Promise<void>;
   onDeleteMode: (modeName: string) => Promise<void>;
   onRenameMode: (modeName: string, nextName: string) => Promise<void>;
   onScheduleChange: (
     modeName: string,
     index: number,
-    key: keyof ScheduleBlock,
-    value: string | number
+    key: keyof WaterHeaterScheduleBlock,
+    value: string | boolean
   ) => void;
   onAddSlot: (modeName: string) => void;
   onRemoveSlot: (modeName: string, index: number) => void;
@@ -42,6 +42,7 @@ export default function WaterHeaterPanel({
 }: WaterHeaterPanelProps) {
   const [activeTab, setActiveTab] = useState(config.activeModeName);
   const [entityIdDraft, setEntityIdDraft] = useState(config.entityId);
+  const [heatingTemperatureDraft, setHeatingTemperatureDraft] = useState(config.heatingTemperatureC);
   const [modeNameDraft, setModeNameDraft] = useState(config.activeModeName);
   const renameTimerRef = useRef<number | null>(null);
 
@@ -50,7 +51,8 @@ export default function WaterHeaterPanel({
   useEffect(() => {
     setActiveTab(config.activeModeName);
     setEntityIdDraft(config.entityId);
-  }, [config.activeModeName, config.entityId]);
+    setHeatingTemperatureDraft(config.heatingTemperatureC);
+  }, [config.activeModeName, config.entityId, config.heatingTemperatureC]);
 
   useEffect(() => {
     setModeNameDraft(selectedMode?.name ?? "");
@@ -96,7 +98,18 @@ export default function WaterHeaterPanel({
         <Form.Item label="Climate entity id">
           <Input value={entityIdDraft} onChange={(event) => setEntityIdDraft(event.target.value)} />
         </Form.Item>
-        <Button type="primary" onClick={() => onSaveConfig(entityIdDraft.trim())}>
+        <Form.Item label="Heating temperature (C)">
+          <InputNumber
+            min={30}
+            max={65}
+            value={heatingTemperatureDraft}
+            onChange={(value) => setHeatingTemperatureDraft(Number(value ?? 55))}
+          />
+        </Form.Item>
+        <Button
+          type="primary"
+          onClick={() => onSaveConfig(entityIdDraft.trim(), heatingTemperatureDraft)}
+        >
           Save config
         </Button>
       </Form>
@@ -128,10 +141,8 @@ export default function WaterHeaterPanel({
               <Input value={modeNameDraft} onChange={(event) => setModeNameDraft(event.target.value)} />
             </Form.Item>
           </Form>
-          <Typography.Text type="secondary">
-            Range 30-65C, values below 30 mean off.
-          </Typography.Text>
-          <ScheduleTable
+          <Typography.Text type="secondary">Schedule controls on/off heating only.</Typography.Text>
+          <WaterHeaterScheduleTable
             modeName={selectedMode.name}
             schedule={selectedMode.schedule}
             onScheduleChange={onScheduleChange}
@@ -140,8 +151,6 @@ export default function WaterHeaterPanel({
             onSaveSchedule={onSaveSchedule}
             onDeleteMode={() => onDeleteMode(selectedMode.name)}
             canDeleteMode={config.modes.length > 1}
-            minTargetC={0}
-            maxTargetC={65}
           />
         </>
       ) : null}

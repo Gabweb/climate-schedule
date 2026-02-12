@@ -37,12 +37,19 @@ export type GlobalSettings = {
 
 export type WaterHeaterMode = {
   name: string;
-  schedule: ScheduleBlock[];
+  schedule: WaterHeaterScheduleBlock[];
+};
+
+export type WaterHeaterScheduleBlock = {
+  start: string; // HH:MM
+  end: string; // HH:MM
+  enabled: boolean;
 };
 
 export type WaterHeaterConfig = {
   version: number;
   entityId: string;
+  heatingTemperatureC: number;
   activeModeName: string;
   modes: WaterHeaterMode[];
   updatedAt: string;

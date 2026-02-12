@@ -1,4 +1,4 @@
-import type { ScheduleBlock, WaterHeaterConfig } from "../../../shared/models";
+import type { WaterHeaterConfig, WaterHeaterScheduleBlock } from "../../../shared/models";
 
 function apiUrl(path: string) {
   const normalized = path.replace(/^\/+/, "");
@@ -42,12 +42,15 @@ export async function setWaterHeaterActiveMode(activeModeName: string): Promise<
 
 export async function createWaterHeaterMode(payload: {
   name: string;
-  schedule?: ScheduleBlock[];
+  schedule?: WaterHeaterScheduleBlock[];
 }) {
-  return request<{ name: string; schedule: ScheduleBlock[] }>(apiUrl("api/water-heater/modes"), {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
+  return request<{ name: string; schedule: WaterHeaterScheduleBlock[] }>(
+    apiUrl("api/water-heater/modes"),
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }
+  );
 }
 
 export async function deleteWaterHeaterMode(modeName: string) {
@@ -61,8 +64,11 @@ export async function deleteWaterHeaterMode(modeName: string) {
   }
 }
 
-export async function updateWaterHeaterSchedule(modeName: string, schedule: ScheduleBlock[]) {
-  return request<{ name: string; schedule: ScheduleBlock[] }>(
+export async function updateWaterHeaterSchedule(
+  modeName: string,
+  schedule: WaterHeaterScheduleBlock[]
+) {
+  return request<{ name: string; schedule: WaterHeaterScheduleBlock[] }>(
     apiUrl(`api/water-heater/modes/${encodeURIComponent(modeName)}/schedule`),
     {
       method: "PUT",

@@ -1,4 +1,7 @@
-import type { ScheduleBlock } from "./models";
+type TimeBlockLike = {
+  start: string;
+  end: string;
+};
 
 export function parseTimeToMinutes(time: string): number {
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
@@ -38,7 +41,7 @@ export function minutesToTime(totalMinutes: number): string {
   return `${hh}:${mm}`;
 }
 
-export function isMinuteInBlock(block: ScheduleBlock, minuteOfDay: number): boolean {
+export function isMinuteInBlock(block: TimeBlockLike, minuteOfDay: number): boolean {
   const start = parseTimeToMinutes(block.start);
   const end = parseTimeToMinutes(block.end);
   const isLastMinute = block.end === "23:59";
@@ -47,10 +50,10 @@ export function isMinuteInBlock(block: ScheduleBlock, minuteOfDay: number): bool
     : minuteOfDay >= start && minuteOfDay < end;
 }
 
-export function findScheduleBlockAtMinute(
-  schedule: ScheduleBlock[],
+export function findScheduleBlockAtMinute<T extends TimeBlockLike>(
+  schedule: T[],
   minuteOfDay: number
-): ScheduleBlock | null {
+): T | null {
   for (const block of schedule) {
     if (isMinuteInBlock(block, minuteOfDay)) {
       return block;
@@ -59,7 +62,7 @@ export function findScheduleBlockAtMinute(
   return null;
 }
 
-export function validateScheduleBlocks(schedule: ScheduleBlock[]): void {
+export function validateScheduleBlocks(schedule: TimeBlockLike[]): void {
   if (schedule.length === 0) {
     throw new Error("schedule must contain at least one block");
   }
@@ -95,7 +98,7 @@ export function validateScheduleBlocks(schedule: ScheduleBlock[]): void {
   }
 }
 
-export function validateGranularity(schedule: ScheduleBlock[], stepMinutes = 10): void {
+export function validateGranularity(schedule: TimeBlockLike[], stepMinutes = 10): void {
   for (const block of schedule) {
     const start = parseTimeToMinutes(block.start);
     const end = parseTimeToMinutes(block.end);

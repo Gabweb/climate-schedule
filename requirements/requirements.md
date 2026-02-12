@@ -29,7 +29,8 @@
 - Water heater is a single dedicated configuration (not a room) with:
   - one HA climate entity mapping
   - room-like modes and schedules
-  - target range `30..65C`; values below `30C` mean off.
+  - one global heating temperature (`30..65C`)
+  - schedule blocks that only control on/off heating.
 
 ## Defaults
 - New room gets one mode: `Default`.
@@ -75,8 +76,8 @@
   - publish MQTT state for virtual room entity
 - For water heater on each tick:
   - evaluate active schedule with holiday override
-  - if effective target `<30C` (or holiday mode enabled), call `climate.turn_off`
-  - otherwise set target temperature in `30..65C` range.
+  - if block is off (or holiday mode enabled), call `climate.turn_off`
+  - if block is on, set target temperature to configured global heating temperature.
 - Startup checks log warnings/errors but do not hard-stop:
   - MQTT connectivity (when configured)
   - mapped HA climate entity existence
@@ -100,7 +101,7 @@
 - Main: room cards sorted by floor (`UG`, `EG`, `1OG`, `2OG`) then room name.
 - Dedicated water heater section/card with:
   - active mode selection
-  - current effective state (`Off` or target temperature)
+  - current effective state (`Off` or global heating temperature)
   - schedule visualization with active block highlight.
 - Room card shows:
   - floor tag + room name

@@ -9,6 +9,7 @@ export type RoomListProps = {
   onSetActiveMode: (roomKey: string, modeName: string) => void;
   nowMinute: number;
   addRoomNode?: React.ReactNode;
+  leadingNode?: React.ReactNode;
   settings: GlobalSettings;
 };
 
@@ -18,11 +19,13 @@ export default function RoomList({
   onSetActiveMode,
   nowMinute,
   addRoomNode,
+  leadingNode,
   settings
 }: RoomListProps) {
   if (rooms.length === 0) {
     return (
       <Row gutter={[16, 16]}>
+        {leadingNode ? <Col span={24}>{leadingNode}</Col> : null}
         <Col span={24}>
           <Empty description="No rooms configured" />
         </Col>
@@ -45,6 +48,11 @@ export default function RoomList({
 
   return (
     <Row gutter={[16, 16]}>
+      {leadingNode ? (
+        <Col key="leading-node" xs={24} sm={12} lg={8}>
+          {leadingNode}
+        </Col>
+      ) : null}
       {ordered.map((room) => (
         <Col key={roomKey(room)} xs={24} sm={12} lg={8}>
           <RoomCard

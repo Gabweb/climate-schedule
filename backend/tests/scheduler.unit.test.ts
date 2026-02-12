@@ -67,10 +67,11 @@ describe("scheduler", () => {
     loadSettingsMock.mockReturnValue({ version: 1, holidayModeEnabled: true });
     minuteOfDayInTimeZoneMock.mockReturnValue(9 * 60);
     loadWaterHeaterConfigMock.mockReturnValue({
-      version: 1,
+      version: 2,
       entityId: "climate.water_heater",
+      heatingTemperatureC: 55,
       activeModeName: "Default",
-      modes: [{ name: "Default", schedule: [{ start: "00:00", end: "23:59", targetC: 0 }] }],
+      modes: [{ name: "Default", schedule: [{ start: "00:00", end: "23:59", enabled: false }] }],
       updatedAt: new Date().toISOString()
     });
   });
@@ -137,10 +138,11 @@ describe("scheduler", () => {
     };
     loadSettingsMock.mockReturnValue({ version: 1, holidayModeEnabled: true });
     loadWaterHeaterConfigMock.mockReturnValue({
-      version: 1,
+      version: 2,
       entityId: "climate.water_heater",
+      heatingTemperatureC: 55,
       activeModeName: "Default",
-      modes: [{ name: "Default", schedule: [{ start: "00:00", end: "23:59", targetC: 55 }] }],
+      modes: [{ name: "Default", schedule: [{ start: "00:00", end: "23:59", enabled: true }] }],
       updatedAt: new Date().toISOString()
     });
 
@@ -149,5 +151,32 @@ describe("scheduler", () => {
     scheduler.stop();
 
     expect(adapter.turnOff).toHaveBeenCalledWith("climate.water_heater");
+  });
+
+  it("applies configured heating temperature when water heater schedule is on", async () => {
+    const adapter: ClimateAdapter = {
+      setTargetTemperature: vi.fn().mockResolvedValue(undefined),
+      getCurrentTemperature: vi.fn().mockResolvedValue(21),
+      turnOff: vi.fn().mockResolvedValue(undefined)
+    };
+    loadSettingsMock.mockReturnValue({ version: 1, holidayModeEnabled: false });
+    loadWaterHeaterConfigMock.mockReturnValue({
+      version: 2,
+      entityId: "climate.water_heater",
+      heatingTemperatureC: 62,
+      activeModeName: "Default",
+      modes: [{ name: "Default", schedule: [{ start: "00:00", end: "23:59", enabled: true }] }],
+      updatedAt: new Date().toISOString()
+    });
+
+    const scheduler = startScheduler({ adapter, intervalMs: 60_000 });
+    await vi.runOnlyPendingTimersAsync();
+    scheduler.stop();
+
+    expect(adapter.setTargetTemperature).toHaveBeenCalledWith({
+      entityId: "climate.water_heater",
+      temperatureC: 62
+    });
+    expect(adapter.turnOff).not.toHaveBeenCalledWith("climate.water_heater");
   });
 });

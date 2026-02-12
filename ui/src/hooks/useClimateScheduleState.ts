@@ -5,7 +5,8 @@ import type {
   RoomConfig,
   RoomsFile,
   ScheduleBlock,
-  WaterHeaterConfig
+  WaterHeaterConfig,
+  WaterHeaterScheduleBlock
 } from "../../../shared/models";
 import { minuteOfDayInTimeZone } from "../../../shared/schedule";
 import {
@@ -35,6 +36,11 @@ import {
   updateWaterHeaterSchedule
 } from "../api/waterHeater";
 import { fetchRuntimeStatus } from "../api/status";
+import {
+  addWaterHeaterScheduleSlot,
+  removeWaterHeaterScheduleSlot,
+  updateWaterHeaterScheduleBlock
+} from "../../../shared/waterHeaterScheduleEditor";
 
 type LoadState =
   | { status: "idle" }
@@ -44,10 +50,11 @@ type LoadState =
 
 const defaultSettings: GlobalSettings = { version: 1, holidayModeEnabled: false };
 const defaultWaterHeater: WaterHeaterConfig = {
-  version: 1,
+  version: 2,
   entityId: "",
+  heatingTemperatureC: 55,
   activeModeName: "Default",
-  modes: [{ name: "Default", schedule: [{ start: "00:00", end: "23:59", targetC: 0 }] }],
+  modes: [{ name: "Default", schedule: [{ start: "00:00", end: "23:59", enabled: false }] }],
   updatedAt: new Date(0).toISOString()
 };
 
@@ -405,9 +412,9 @@ export function useClimateScheduleState() {
     }
   };
 
-  const handleSaveWaterHeaterConfig = async (entityId: string) => {
+  const handleSaveWaterHeaterConfig = async (entityId: string, heatingTemperatureC: number) => {
     const previous = waterHeater;
-    const next = { ...waterHeater, entityId };
+    const next = { ...waterHeater, entityId, heatingTemperatureC };
     setWaterHeater(next);
     try {
       await runWithSync(async () => {
@@ -480,12 +487,12 @@ export function useClimateScheduleState() {
   const handleWaterHeaterScheduleChange = (
     modeName: string,
     index: number,
-    key: keyof ScheduleBlock,
-    value: string | number
+    key: keyof WaterHeaterScheduleBlock,
+    value: string | boolean
   ) => {
     const targetMode = waterHeater.modes.find((mode) => mode.name === modeName);
     if (!targetMode) return;
-    const nextSchedule = updateScheduleBlock(targetMode.schedule, index, key, value);
+    const nextSchedule = updateWaterHeaterScheduleBlock(targetMode.schedule, index, key, value);
     setWaterHeater({
       ...waterHeater,
       modes: waterHeater.modes.map((mode) =>
@@ -497,7 +504,7 @@ export function useClimateScheduleState() {
   const handleAddWaterHeaterSlot = (modeName: string) => {
     const targetMode = waterHeater.modes.find((mode) => mode.name === modeName);
     if (!targetMode) return;
-    const nextSchedule = addScheduleSlot(targetMode.schedule, 10, 10);
+    const nextSchedule = addWaterHeaterScheduleSlot(targetMode.schedule, 10, 10);
     setWaterHeater({
       ...waterHeater,
       modes: waterHeater.modes.map((mode) =>
@@ -509,7 +516,7 @@ export function useClimateScheduleState() {
   const handleRemoveWaterHeaterSlot = (modeName: string, index: number) => {
     const targetMode = waterHeater.modes.find((mode) => mode.name === modeName);
     if (!targetMode) return;
-    const nextSchedule = removeScheduleSlot(targetMode.schedule, index);
+    const nextSchedule = removeWaterHeaterScheduleSlot(targetMode.schedule, index);
     setWaterHeater({
       ...waterHeater,
       modes: waterHeater.modes.map((mode) =>

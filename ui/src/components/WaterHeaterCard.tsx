@@ -62,7 +62,7 @@ export default function WaterHeaterCard({
         dataSource={activeMode?.schedule ?? []}
         renderItem={(block) => {
           const isActive = isMinuteInBlock(block, nowMinute);
-          const label = block.targetC < 30 ? "Off" : `${Math.min(65, Math.max(30, block.targetC))}C`;
+          const label = block.enabled ? "Heat on" : "Off";
           return (
             <List.Item
               style={{
@@ -81,8 +81,11 @@ export default function WaterHeaterCard({
       {settings.holidayModeEnabled ? (
         <Typography.Text type="warning">Holiday mode active: water heater is off.</Typography.Text>
       ) : null}
-      {activeBlock && activeBlock.targetC < 30 ? (
-        <Typography.Text type="secondary">Current block is below 30C -&gt; off.</Typography.Text>
+      <Typography.Text type="secondary">
+        Heating temperature: {config.heatingTemperatureC}C
+      </Typography.Text>
+      {activeBlock && !activeBlock.enabled ? (
+        <Typography.Text type="secondary">Current block is off.</Typography.Text>
       ) : null}
     </Card>
   );

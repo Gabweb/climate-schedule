@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import { loadRoomsFile } from "../src/rooms";
 import { loadSettings } from "../src/settings";
+import { loadWaterHeaterConfig } from "../src/waterHeater";
 
 function tempDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "climate-schedule-persistence-"));
@@ -65,5 +66,35 @@ describe("persistence loading and migration", () => {
 
     expect(loaded.version).toBe(1);
     expect(loaded.rooms).toHaveLength(1);
+  });
+
+  it("migrates water heater v1 temperature blocks to v2 on/off blocks", () => {
+    const filePath = path.join(process.env.DATA_DIR!, "water-heater.json");
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify({
+        version: 1,
+        entityId: "climate.water_heater",
+        activeModeName: "Default",
+        modes: [
+          {
+            name: "Default",
+            schedule: [
+              { start: "00:00", end: "08:00", targetC: 0 },
+              { start: "08:00", end: "20:00", targetC: 50 },
+              { start: "20:00", end: "23:59", targetC: 0 }
+            ]
+          }
+        ],
+        updatedAt: new Date().toISOString()
+      }),
+      "utf-8"
+    );
+
+    const loaded = loadWaterHeaterConfig();
+    expect(loaded.version).toBe(2);
+    expect(loaded.heatingTemperatureC).toBe(55);
+    expect(loaded.modes[0].schedule[1].enabled).toBe(true);
+    expect(loaded.modes[0].schedule[0].enabled).toBe(false);
   });
 });
