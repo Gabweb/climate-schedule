@@ -1,0 +1,226 @@
+:root {
+  --app-max-width: 1200px;
+  --pico-background-color: #101215;
+  --pico-card-background-color: #292933;
+  --pico-card-sectioning-background-color: #292933;
+  --pico-color: #e4e4e7;
+  --pico-border-color: #3a3d45;
+  --pico-muted-border-color: #3a3d45;
+  --pico-card-border-color: #3a3d45;
+  --pico-form-element-border-color: #3a3d45;
+}
+
+body {
+  margin: 0;
+  background: var(--pico-background-color);
+  color: var(--pico-color);
+}
+
+main {
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.grid-cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.badge {
+  border: 1px solid var(--muted-border-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.85rem;
+}
+
+.badge-active {
+  border-color: var(--pico-primary-border);
+}
+
+.badge-floor {
+  background: color-mix(in oklab, var(--pico-primary) 15%, transparent);
+}
+
+.schedule-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-list li {
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--pico-border-radius);
+}
+
+.schedule-active {
+  background: color-mix(in oklab, var(--pico-primary) 15%, transparent);
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.icon-only-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.panel-shell {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(560px, 95vw);
+  height: 100vh;
+  background: var(--pico-background-color);
+  border-left: 1px solid var(--muted-border-color);
+  padding: 1rem;
+  overflow: auto;
+  z-index: 20;
+}
+
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 15;
+}
+
+.sync-indicator {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  border: 1px solid var(--muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-background-color);
+  padding: 0.5rem 0.75rem;
+  z-index: 30;
+}
+
+.muted-text {
+  color: var(--pico-muted-color);
+}
+
+.warning-text {
+  color: #9c4600;
+}
+
+.error-text {
+  color: var(--pico-del-color);
+}
+
+.inline-field {
+  margin-bottom: 0.75rem;
+}
+
+.inline-field label {
+  margin-bottom: 0.25rem;
+}
+
+.entity-card {
+  padding: 1rem;
+  font-size: 0.95rem;
+}
+
+.entity-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.entity-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.entity-card-heading strong {
+  font-size: 1.02rem;
+}
+
+.entity-card-edit {
+  margin-bottom: 0;
+}
+
+.entity-card-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.entity-card-meta strong {
+  font-size: 1rem;
+}
+
+.entity-card-mode {
+  margin-bottom: 0.65rem;
+}
+
+.entity-schedule-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.entity-schedule-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid color-mix(in oklab, var(--muted-border-color) 80%, transparent);
+  font-size: 0.92rem;
+}
+
+.table-compact th,
+.table-compact td {
+  padding: 0.4rem;
+}
+
+.table-compact input,
+.table-compact select,
+.table-compact button {
+  margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  .panel-shell {
+    width: 100vw;
+  }
+}

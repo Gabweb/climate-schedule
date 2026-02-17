@@ -1,4 +1,3 @@
-import { Empty, Row, Col } from "antd";
 import type { GlobalSettings, RoomConfig } from "../../../shared/models";
 import { roomKey } from "../../../shared/roomKey";
 import RoomCard from "./RoomCard";
@@ -11,6 +10,7 @@ export type RoomListProps = {
   addRoomNode?: React.ReactNode;
   leadingNode?: React.ReactNode;
   settings: GlobalSettings;
+  canEdit: boolean;
 };
 
 export default function RoomList({
@@ -20,22 +20,9 @@ export default function RoomList({
   nowMinute,
   addRoomNode,
   leadingNode,
-  settings
+  settings,
+  canEdit
 }: RoomListProps) {
-  if (rooms.length === 0) {
-    return (
-      <Row gutter={[16, 16]}>
-        {leadingNode ? <Col span={24}>{leadingNode}</Col> : null}
-        <Col span={24}>
-          <Empty description="No rooms configured" />
-        </Col>
-        {addRoomNode ? (
-          <Col span={24}>{addRoomNode}</Col>
-        ) : null}
-      </Row>
-    );
-  }
-
   const ordered = [...rooms].sort((a, b) => {
     const floorOrder = ["UG", "EG", "1OG", "2OG"] as const;
     const floorIndexA = floorOrder.indexOf(a.floor);
@@ -47,28 +34,21 @@ export default function RoomList({
   });
 
   return (
-    <Row gutter={[16, 16]}>
-      {leadingNode ? (
-        <Col key="leading-node" xs={24} sm={12} lg={8}>
-          {leadingNode}
-        </Col>
-      ) : null}
+    <div className="grid-cards">
+      {leadingNode ? leadingNode : null}
       {ordered.map((room) => (
-        <Col key={roomKey(room)} xs={24} sm={12} lg={8}>
-          <RoomCard
-            room={room}
-            onEditRoom={onEditRoom}
-            onSetActiveMode={onSetActiveMode}
-            nowMinute={nowMinute}
-            settings={settings}
-          />
-        </Col>
+        <RoomCard
+          key={roomKey(room)}
+          room={room}
+          onEditRoom={onEditRoom}
+          onSetActiveMode={onSetActiveMode}
+          nowMinute={nowMinute}
+          settings={settings}
+          canEdit={canEdit}
+        />
       ))}
-      {addRoomNode ? (
-        <Col key="add-room" xs={24} sm={12} lg={8}>
-          {addRoomNode}
-        </Col>
-      ) : null}
-    </Row>
+      {rooms.length === 0 ? <article className="muted-text">No rooms configured.</article> : null}
+      {addRoomNode ? addRoomNode : null}
+    </div>
   );
 }

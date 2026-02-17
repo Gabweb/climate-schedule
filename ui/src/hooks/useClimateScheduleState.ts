@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { message } from "antd";
 import type {
   GlobalSettings,
   RoomConfig,
@@ -60,6 +59,7 @@ const defaultWaterHeater: WaterHeaterConfig = {
 
 export function useClimateScheduleState() {
   const [state, setState] = useState<LoadState>({ status: "idle" });
+  const [notice, setNotice] = useState<string | null>(null);
   const [settings, setSettings] = useState<GlobalSettings>(defaultSettings);
   const [selectedRoomKey, setSelectedRoomKey] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -130,6 +130,7 @@ export function useClimateScheduleState() {
     setState({ status: "loading" });
     try {
       await refreshData();
+      setNotice(null);
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to load rooms";
       setState({ status: "error", message: messageText });
@@ -193,7 +194,7 @@ export function useClimateScheduleState() {
       });
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to create room";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -222,7 +223,7 @@ export function useClimateScheduleState() {
         await refreshData();
       });
       const messageText = error instanceof Error ? error.message : "Failed to save room";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -242,7 +243,7 @@ export function useClimateScheduleState() {
         await refreshData();
       });
       const messageText = error instanceof Error ? error.message : "Failed to set active mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -255,7 +256,7 @@ export function useClimateScheduleState() {
       });
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to create mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -267,7 +268,7 @@ export function useClimateScheduleState() {
       });
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to delete mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -276,7 +277,7 @@ export function useClimateScheduleState() {
     const trimmed = nextName.trim();
     if (!trimmed) return;
     if (selectedRoom.modes.some((mode) => mode.name === trimmed)) {
-      message.error("Mode name already exists.");
+      setNotice("Mode name already exists.");
       return;
     }
     try {
@@ -300,7 +301,7 @@ export function useClimateScheduleState() {
         await refreshData();
       });
       const messageText = error instanceof Error ? error.message : "Failed to rename mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -368,7 +369,7 @@ export function useClimateScheduleState() {
       });
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "Failed to save schedule";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -391,7 +392,7 @@ export function useClimateScheduleState() {
       } catch (error) {
         setSettings(previous);
         const messageText = error instanceof Error ? error.message : "Failed to update settings";
-        message.error(messageText);
+        setNotice(messageText);
       }
     });
   };
@@ -408,7 +409,7 @@ export function useClimateScheduleState() {
       setWaterHeater(previous);
       const messageText =
         error instanceof Error ? error.message : "Failed to set water heater mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -425,7 +426,7 @@ export function useClimateScheduleState() {
       setWaterHeater(previous);
       const messageText =
         error instanceof Error ? error.message : "Failed to save water heater config";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -440,7 +441,7 @@ export function useClimateScheduleState() {
     } catch (error) {
       const messageText =
         error instanceof Error ? error.message : "Failed to create water heater mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -453,7 +454,7 @@ export function useClimateScheduleState() {
     } catch (error) {
       const messageText =
         error instanceof Error ? error.message : "Failed to delete water heater mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -480,7 +481,7 @@ export function useClimateScheduleState() {
       setWaterHeater(previous);
       const messageText =
         error instanceof Error ? error.message : "Failed to rename water heater mode";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
@@ -536,12 +537,13 @@ export function useClimateScheduleState() {
     } catch (error) {
       const messageText =
         error instanceof Error ? error.message : "Failed to save water heater schedule";
-      message.error(messageText);
+      setNotice(messageText);
     }
   };
 
   return {
     state,
+    notice,
     settings,
     rooms,
     selectedRoom,
@@ -563,6 +565,7 @@ export function useClimateScheduleState() {
     setShowSettings,
     setShowWaterHeaterSettings,
     setWaterHeaterModeDraft,
+    clearNotice: () => setNotice(null),
     handleCreateRoom,
     handleSaveRoom,
     handleSetActiveMode,

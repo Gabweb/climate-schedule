@@ -1,11 +1,6 @@
-import { Button, InputNumber, Popconfirm, Table, TimePicker } from "antd";
-import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ScheduleBlock } from "../../../shared/models";
-import {
-  isScheduleEndInvalid,
-  isScheduleStartInvalid
-} from "../../../shared/scheduleEditor";
-import dayjs, { type Dayjs } from "dayjs";
+import { isScheduleEndInvalid, isScheduleStartInvalid } from "../../../shared/scheduleEditor";
+import { MinusCircle, Plus } from "lucide-react";
 
 type ScheduleTableProps = {
   modeName: string;
@@ -25,16 +20,6 @@ type ScheduleTableProps = {
   maxTargetC?: number;
 };
 
-type RowData = ScheduleBlock & { key: string; index: number };
-
-const timeValue = (value: string): Dayjs | null => {
-  const parsed = dayjs(value, "HH:mm");
-  return parsed.isValid() ? parsed : null;
-};
-
-const minutesToDisable = (step: number) =>
-  Array.from({ length: 60 }, (_, minute) => minute).filter((minute) => minute % step !== 0);
-
 export default function ScheduleTable({
   modeName,
   schedule,
@@ -48,121 +33,100 @@ export default function ScheduleTable({
   maxTargetC = 35
 }: ScheduleTableProps) {
   const lastIndex = schedule.length - 1;
-  const dataSource: RowData[] = schedule.map((block, index) => ({
-    key: `${block.start}-${index}`,
-    index,
-    ...block
-  }));
 
   return (
     <>
-      <Table<RowData>
-        pagination={false}
-        dataSource={dataSource}
-        columns={[
-          {
-            title: "Start",
-            dataIndex: "start",
-            render: (value, record) => (
-              <TimePicker
-                format="HH:mm"
-                value={timeValue(value)}
-                status={isScheduleStartInvalid(schedule, record.index) ? "error" : undefined}
-                onChange={(_, valueString) => {
-                  if (!valueString) return;
-                  onScheduleChange(modeName, record.index, "start", valueString);
-                }}
-                allowClear={false}
-                showNow={false}
-                minuteStep={10}
-                disabled={record.index === 0}
-                disabledTime={() => ({
-                  disabledMinutes: () => minutesToDisable(10)
-                })}
-                style={{ width: "100%" }}
-              />
-            )
-          },
-          {
-            title: "End",
-            dataIndex: "end",
-            render: (value, record) => (
-              <TimePicker
-                format="HH:mm"
-                value={timeValue(value)}
-                status={isScheduleEndInvalid(schedule, record.index) ? "error" : undefined}
-                onChange={(_, valueString) => {
-                  if (!valueString) return;
-                  onScheduleChange(modeName, record.index, "end", valueString);
-                }}
-                allowClear={false}
-                showNow={false}
-                minuteStep={10}
-                disabledTime={() =>
-                  record.index === lastIndex
-                    ? {}
-                    : {
-                        disabledMinutes: () => minutesToDisable(10)
-                      }
-                }
-                disabled={record.index === lastIndex}
-                style={{ width: "100%" }}
-              />
-            )
-          },
-          {
-            title: "Target (degC)",
-            dataIndex: "targetC",
-            render: (value, record) => (
-              <InputNumber
-                min={minTargetC}
-                max={maxTargetC}
-                step={0.5}
-                value={value}
-                onChange={(next) =>
-                  onScheduleChange(modeName, record.index, "targetC", Number(next ?? value))
-                }
-              />
-            )
-          },
-          {
-            title: "",
-            dataIndex: "remove",
-            render: (_, record) => (
-              <Button
-                type="text"
-                icon={<MinusCircleOutlined />}
-                onClick={() => onRemoveSlot(modeName, record.index)}
-                disabled={schedule.length <= 1}
-                aria-label="Remove time slot"
-              />
-            )
-          }
-        ]}
-      />
+      <table className="table-compact">
+        <thead>
+          <tr>
+            <th>Start</th>
+            <th>End</th>
+            <th>Target (°C)</th>
+            <th aria-label="Remove" />
+          </tr>
+        </thead>
+        <tbody>
+          {schedule.map((block, index) => {
+            const startInvalid = isScheduleStartInvalid(schedule, index);
+            const endInvalid = isScheduleEndInvalid(schedule, index);
+            return (
+              <tr key={`${block.start}-${index}`}>
+                <td>
+                  <input
+                    type="time"
+                    step={600}
+                    value={block.start}
+                    disabled={index === 0}
+                    aria-invalid={startInvalid}
+                    onChange={(event) =>
+                      onScheduleChange(modeName, index, "start", event.target.value)
+                    }
+                  />
+                </td>
+                <td>
+                  <input
+                    type="time"
+                    step={600}
+                    value={block.end}
+                    disabled={index === lastIndex}
+                    aria-invalid={endInvalid}
+                    onChange={(event) => onScheduleChange(modeName, index, "end", event.target.value)}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min={minTargetC}
+                    max={maxTargetC}
+                    step={0.5}
+                    value={block.targetC}
+                    onChange={(event) =>
+                      onScheduleChange(modeName, index, "targetC", Number(event.target.value))
+                    }
+                  />
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="secondary icon-only-button"
+                    onClick={() => onRemoveSlot(modeName, index)}
+                    disabled={schedule.length <= 1}
+                    aria-label="Remove time slot"
+                  >
+                    <MinusCircle size={16} aria-hidden="true" />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <Button
-          icon={<PlusOutlined />}
+      <div className="row-actions">
+        <button
+          type="button"
+          className="outline with-icon"
           onClick={() => onAddSlot(modeName)}
           disabled={schedule.length >= 10}
         >
+          <Plus size={16} aria-hidden="true" />
           Add slot
-        </Button>
-        <Button type="primary" onClick={() => onSaveSchedule(modeName)}>
+        </button>
+        <button type="button" onClick={() => onSaveSchedule(modeName)}>
           Save schedule
-        </Button>
-        <Popconfirm
-          title="Delete this mode?"
-          okText="Yes"
-          cancelText="No"
-          onConfirm={onDeleteMode}
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            if (window.confirm("Delete this mode?")) {
+              onDeleteMode();
+            }
+          }}
           disabled={!canDeleteMode}
         >
-          <Button danger disabled={!canDeleteMode}>
-            Delete mode
-          </Button>
-        </Popconfirm>
+          Delete mode
+        </button>
       </div>
     </>
   );

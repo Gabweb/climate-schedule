@@ -1,9 +1,9 @@
-import { Card, List, Space, Tag, Typography, Button, Dropdown } from "antd";
-import { DownOutlined, EditOutlined } from "@ant-design/icons";
+import { Pencil } from "lucide-react";
 import type { GlobalSettings, RoomConfig } from "../../../shared/models";
 import { findScheduleBlockAtMinute, isMinuteInBlock } from "../../../shared/schedule";
 import { roomKey } from "../../../shared/roomKey";
 import { applyGlobalTemperatureSettings } from "../../../shared/temperature";
+import { CardModeSelect, CardScheduleList, EntityCard } from "./CardWidgets";
 
 export type RoomCardProps = {
   room: RoomConfig;
@@ -11,6 +11,7 @@ export type RoomCardProps = {
   onSetActiveMode: (roomKey: string, modeName: string) => void;
   nowMinute: number;
   settings: GlobalSettings;
+  canEdit: boolean;
 };
 
 export default function RoomCard({
@@ -18,88 +19,52 @@ export default function RoomCard({
   onEditRoom,
   onSetActiveMode,
   nowMinute,
-  settings
+  settings,
+  canEdit
 }: RoomCardProps) {
   const activeMode = room.modes.find((mode) => mode.name === room.activeModeName);
   const activeBlock = activeMode ? findScheduleBlockAtMinute(activeMode.schedule, nowMinute) : null;
   const currentTarget = activeBlock
-    ? `${applyGlobalTemperatureSettings(activeBlock.targetC, settings)}°C`
-    : "—";
-  const modeOptions = room.modes.map((mode) => ({
-    key: mode.name,
-    label: mode.name
-  }));
-  const hasMultipleModes = room.modes.length > 1;
+    ? `${applyGlobalTemperatureSettings(activeBlock.targetC, settings)} °C`
+    : "-";
   const roomId = roomKey(room);
 
+  const scheduleItems = (activeMode?.schedule ?? []).map((block) => ({
+    key: `${block.start}-${block.end}`,
+    left: `${block.start}-${block.end}`,
+    right: `${applyGlobalTemperatureSettings(block.targetC, settings)} °C`,
+    active: isMinuteInBlock(block, nowMinute)
+  }));
+
   return (
-    <Card
-      title={
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Space size="small">
-            <Tag color="blue">{room.floor}</Tag>
-            <Typography.Text strong>{room.name}</Typography.Text>
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              aria-label="Edit room"
-              onClick={() => onEditRoom(roomId)}
-            />
-          </Space>
-        </div>
-      }
-      extra={
-        <>
-          <Tag>{currentTarget}</Tag>
-          {hasMultipleModes ? (
-            <Dropdown
-              trigger={["click"]}
-              menu={{
-                items: modeOptions,
-                onClick: ({ key }) => onSetActiveMode(roomId, String(key))
-              }}
-            >
-              <Tag color="green" style={{ cursor: "pointer" }}>
-                <Space size={4}>
-                  {activeMode?.name ?? "None"}
-                  <DownOutlined />
-                </Space>
-              </Tag>
-            </Dropdown>
-          ) : (
-            <Tag color="green">{activeMode?.name ?? "None"}</Tag>
-          )}
-        </>
+    <EntityCard
+      title={room.name}
+      titleBadge={<span className="badge badge-floor">{room.floor}</span>}
+      headerRight={
+        canEdit ? (
+          <button
+            type="button"
+            className="secondary entity-card-edit icon-only-button"
+            onClick={() => onEditRoom(roomId)}
+            aria-label="Edit room"
+          >
+            <Pencil size={16} aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="badge">{currentTarget}</span>
+        )
       }
     >
-      <Space direction="vertical" size="small" style={{ width: "100%" }}>
+      <CardModeSelect
+        id={`room-mode-${roomId}`}
+        ariaLabel="Active mode"
+        value={activeMode?.name ?? ""}
+        options={room.modes.map((mode) => ({ value: mode.name, label: mode.name }))}
+        disabled={room.modes.length <= 1}
+        onChange={(modeName) => onSetActiveMode(roomId, modeName)}
+      />
 
-        {activeMode ? (
-          <List
-            size="small"
-            dataSource={activeMode.schedule}
-            renderItem={(block) => {
-              const isActive = isMinuteInBlock(block, nowMinute);
-              return (
-                <List.Item
-                  style={{
-                    background: isActive ? "#e6f4ff" : "transparent",
-                    borderRadius: 6,
-                    padding: "4px 8px"
-                  }}
-                >
-                  <Typography.Text>
-                    {block.start}–{block.end} ·{" "}
-                    {applyGlobalTemperatureSettings(block.targetC, settings)}°C
-                  </Typography.Text>
-                </List.Item>
-              );
-            }}
-          />
-        ) : (
-          <Typography.Text type="secondary">No active mode configured.</Typography.Text>
-        )}
-      </Space>
-    </Card>
+      <CardScheduleList items={scheduleItems} emptyText="No active mode configured." />
+    </EntityCard>
   );
 }

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Divider, Form, Input, Select, Tabs, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Plus } from "lucide-react";
 import type { RoomConfig, ScheduleBlock } from "../../../shared/models";
 import { roomKey } from "../../../shared/roomKey";
 import ScheduleTable from "./ScheduleTable";
@@ -95,16 +94,14 @@ export default function SettingsPanel({
   const modeTabs = useMemo(() => {
     if (!room) return [];
     return [
-      ...room.modes.map((mode) => ({
-        key: mode.name,
-        label: mode.name
-      })),
+      ...room.modes.map((mode) => ({ key: mode.name, label: mode.name })),
       {
         key: "__add__",
         label: (
-          <>
-            <PlusOutlined /> Add mode
-          </>
+          <span className="with-icon">
+            <Plus size={16} aria-hidden="true" />
+            Add mode
+          </span>
         )
       }
     ];
@@ -112,69 +109,97 @@ export default function SettingsPanel({
 
   return (
     <div>
-      <Typography.Title level={5}>Edit room</Typography.Title>
-      {!room && <Typography.Text>Select a room to edit.</Typography.Text>}
-      {room && (
-        <Form layout="vertical">
-          <Form.Item label="Name">
-            <Input
+      <h4>Edit room</h4>
+      {!room ? <p className="muted-text">Select a room to edit.</p> : null}
+      {room ? (
+        <>
+          <div className="inline-field">
+            <label htmlFor="edit-room-name">Name</label>
+            <input
+              id="edit-room-name"
               value={roomEditDraft.name}
-              onChange={(event) =>
-                onRoomEditDraftChange({ ...roomEditDraft, name: event.target.value })
-              }
+              onChange={(event) => onRoomEditDraftChange({ ...roomEditDraft, name: event.target.value })}
             />
-          </Form.Item>
-          <Form.Item label="Floor">
-            <Select
+          </div>
+          <div className="inline-field">
+            <label htmlFor="edit-room-floor">Floor</label>
+            <select
+              id="edit-room-floor"
               value={roomEditDraft.floor}
-              onChange={(value) => onRoomEditDraftChange({ ...roomEditDraft, floor: value })}
-              options={floors.map((floor) => ({ value: floor, label: floor }))}
-            />
-          </Form.Item>
-          <Form.Item label="Climate entity id">
-            <Input
+              onChange={(event) =>
+                onRoomEditDraftChange({ ...roomEditDraft, floor: event.target.value as RoomConfig["floor"] })
+              }
+            >
+              {floors.map((floor) => (
+                <option key={floor} value={floor}>
+                  {floor}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="inline-field">
+            <label htmlFor="edit-room-entity">Climate entity id</label>
+            <input
+              id="edit-room-entity"
               value={roomEditDraft.entityId}
               onChange={(event) =>
                 onRoomEditDraftChange({ ...roomEditDraft, entityId: event.target.value })
               }
             />
-          </Form.Item>
-          <Button type="primary" onClick={() => roomId && onSaveRoom(roomId)}>
+          </div>
+          <button type="button" onClick={() => roomId && onSaveRoom(roomId)}>
             Save room
-          </Button>
-        </Form>
-      )}
+          </button>
+        </>
+      ) : null}
 
-      <Divider />
+      <hr />
 
-      <Typography.Title level={4}>Modes & schedules</Typography.Title>
-      {!room && <Typography.Text>Select a room to edit modes.</Typography.Text>}
-      {room && (
-        <Tabs activeKey={activeTab ?? undefined} items={modeTabs} onChange={setActiveTab} />
-      )}
+      <h4>Modes and schedules</h4>
+      {!room ? <p className="muted-text">Select a room to edit modes.</p> : null}
 
-      {room && activeTab === "__add__" && (
-        <Form layout="vertical">
-          <Form.Item label="Mode name">
-            <Input
+      {room ? (
+        <div className="row-actions">
+          {modeTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={activeTab === tab.key ? "" : "secondary"}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {room && activeTab === "__add__" ? (
+        <>
+          <div className="inline-field">
+            <label htmlFor="create-room-mode">Mode name</label>
+            <input
+              id="create-room-mode"
               placeholder="holiday"
               value={modeDraft.name}
               onChange={(event) => onModeDraftChange({ ...modeDraft, name: event.target.value })}
             />
-          </Form.Item>
-          <Button type="primary" onClick={() => roomId && onCreateMode(roomId)}>
+          </div>
+          <button type="button" onClick={() => roomId && onCreateMode(roomId)}>
             Add mode
-          </Button>
-        </Form>
-      )}
+          </button>
+        </>
+      ) : null}
 
-      {room && selectedMode && activeTab !== "__add__" && (
+      {room && selectedMode && activeTab !== "__add__" ? (
         <>
-          <Form layout="vertical">
-            <Form.Item label="Mode name">
-              <Input value={modeNameDraft} onChange={(event) => setModeNameDraft(event.target.value)} />
-            </Form.Item>
-          </Form>
+          <div className="inline-field">
+            <label htmlFor="room-mode-name">Mode name</label>
+            <input
+              id="room-mode-name"
+              value={modeNameDraft}
+              onChange={(event) => setModeNameDraft(event.target.value)}
+            />
+          </div>
 
           <ScheduleTable
             modeName={selectedMode.name}
@@ -187,7 +212,7 @@ export default function SettingsPanel({
             canDeleteMode={room.modes.length > 1}
           />
         </>
-      )}
+      ) : null}
     </div>
   );
 }

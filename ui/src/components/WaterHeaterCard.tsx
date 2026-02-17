@@ -1,8 +1,8 @@
-import { Button, Card, Dropdown, List, Space, Tag, Typography } from "antd";
-import { DownOutlined, EditOutlined } from "@ant-design/icons";
+import { Pencil } from "lucide-react";
 import type { GlobalSettings, WaterHeaterConfig } from "../../../shared/models";
 import { findScheduleBlockAtMinute, isMinuteInBlock } from "../../../shared/schedule";
 import { evaluateWaterHeaterAtMinute } from "../../../shared/waterHeater";
+import { CardModeSelect, CardScheduleList, EntityCard } from "./CardWidgets";
 
 type WaterHeaterCardProps = {
   config: WaterHeaterConfig;
@@ -10,6 +10,7 @@ type WaterHeaterCardProps = {
   nowMinute: number;
   onEdit: () => void;
   onSetActiveMode: (modeName: string) => void;
+  canEdit: boolean;
 };
 
 export default function WaterHeaterCard({
@@ -17,76 +18,48 @@ export default function WaterHeaterCard({
   settings,
   nowMinute,
   onEdit,
-  onSetActiveMode
+  onSetActiveMode,
+  canEdit
 }: WaterHeaterCardProps) {
   const activeMode = config.modes.find((mode) => mode.name === config.activeModeName);
-  const activeBlock = activeMode ? findScheduleBlockAtMinute(activeMode.schedule, nowMinute) : null;
   const evaluated = evaluateWaterHeaterAtMinute(config, nowMinute, settings);
-  const targetLabel = evaluated.isOff ? "Off" : `${evaluated.temperatureC}C`;
+  const currentStateLabel = evaluated.isOff ? "Off" : "On";
+
+  const scheduleItems = (activeMode?.schedule ?? []).map((block) => ({
+    key: `${block.start}-${block.end}`,
+    left: `${block.start}-${block.end}`,
+    right: block.enabled ? "Heat on" : "Off",
+    active: isMinuteInBlock(block, nowMinute)
+  }));
 
   return (
-    <Card
-      title={
-        <Space size="small">
-          <Typography.Text strong>Water heater</Typography.Text>
-          <Button type="text" icon={<EditOutlined />} aria-label="Edit water heater" onClick={onEdit} />
-        </Space>
-      }
-      extra={
-        <Space>
-          <Tag color={evaluated.isOff ? "default" : "volcano"}>{targetLabel}</Tag>
-          {config.modes.length > 1 ? (
-            <Dropdown
-              trigger={["click"]}
-              menu={{
-                items: config.modes.map((mode) => ({ key: mode.name, label: mode.name })),
-                onClick: ({ key }) => onSetActiveMode(String(key))
-              }}
-            >
-              <Tag color="green" style={{ cursor: "pointer" }}>
-                <Space size={4}>
-                  {config.activeModeName}
-                  <DownOutlined />
-                </Space>
-              </Tag>
-            </Dropdown>
-          ) : (
-            <Tag color="green">{config.activeModeName}</Tag>
-          )}
-        </Space>
+    <EntityCard
+      title="Water heater"
+      headerRight={
+        canEdit ? (
+          <button
+            type="button"
+            className="secondary entity-card-edit icon-only-button"
+            onClick={onEdit}
+            aria-label="Edit water heater"
+          >
+            <Pencil size={16} aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="badge">{currentStateLabel}</span>
+        )
       }
     >
-      <Typography.Text type="secondary">Entity: {config.entityId || "not configured"}</Typography.Text>
-      <List
-        size="small"
-        dataSource={activeMode?.schedule ?? []}
-        renderItem={(block) => {
-          const isActive = isMinuteInBlock(block, nowMinute);
-          const label = block.enabled ? "Heat on" : "Off";
-          return (
-            <List.Item
-              style={{
-                background: isActive ? "#fff7e6" : "transparent",
-                borderRadius: 6,
-                padding: "4px 8px"
-              }}
-            >
-              <Typography.Text>
-                {block.start}-{block.end} · {label}
-              </Typography.Text>
-            </List.Item>
-          );
-        }}
+      <CardModeSelect
+        id="water-heater-active-mode"
+        ariaLabel="Active mode"
+        value={config.activeModeName}
+        options={config.modes.map((mode) => ({ value: mode.name, label: mode.name }))}
+        disabled={config.modes.length <= 1}
+        onChange={onSetActiveMode}
       />
-      {settings.holidayModeEnabled ? (
-        <Typography.Text type="warning">Holiday mode active: water heater is off.</Typography.Text>
-      ) : null}
-      <Typography.Text type="secondary">
-        Heating temperature: {config.heatingTemperatureC}C
-      </Typography.Text>
-      {activeBlock && !activeBlock.enabled ? (
-        <Typography.Text type="secondary">Current block is off.</Typography.Text>
-      ) : null}
-    </Card>
+
+      <CardScheduleList items={scheduleItems} emptyText="No schedule configured." />
+    </EntityCard>
   );
 }

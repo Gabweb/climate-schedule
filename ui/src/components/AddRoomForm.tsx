@@ -1,4 +1,3 @@
-import { Button, Form, Input, Select, Typography } from "antd";
 import type { RoomConfig } from "../../../shared/models";
 
 export type RoomDraft = {
@@ -24,33 +23,45 @@ export default function AddRoomForm({
 }: AddRoomFormProps) {
   return (
     <div>
-      {showTitle ? <Typography.Title level={4}>Add room</Typography.Title> : null}
-      <Form layout="vertical">
-        <Form.Item label="Name">
-          <Input
-            placeholder="Living"
-            value={draft.name}
-            onChange={(event) => onChange({ ...draft, name: event.target.value })}
-          />
-        </Form.Item>
-        <Form.Item label="Floor">
-          <Select
-            value={draft.floor}
-            onChange={(value) => onChange({ ...draft, floor: value })}
-            options={floors.map((floor) => ({ value: floor, label: floor }))}
-          />
-        </Form.Item>
-        <Form.Item label="Climate entity id">
-          <Input
-            placeholder="climate.living"
-            value={draft.entityId}
-            onChange={(event) => onChange({ ...draft, entityId: event.target.value })}
-          />
-        </Form.Item>
-        <Button type="primary" onClick={onSubmit}>
-          Create room
-        </Button>
-      </Form>
+      {showTitle ? <h4>Add room</h4> : null}
+      <div className="inline-field">
+        <label htmlFor="add-room-name">Name</label>
+        <input
+          id="add-room-name"
+          placeholder="Living"
+          value={draft.name}
+          onChange={(event) => onChange({ ...draft, name: event.target.value })}
+        />
+      </div>
+
+      <div className="inline-field">
+        <label htmlFor="add-room-floor">Floor</label>
+        <select
+          id="add-room-floor"
+          value={draft.floor}
+          onChange={(event) => onChange({ ...draft, floor: event.target.value as RoomConfig["floor"] })}
+        >
+          {floors.map((floor) => (
+            <option key={floor} value={floor}>
+              {floor}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="inline-field">
+        <label htmlFor="add-room-entity">Climate entity id</label>
+        <input
+          id="add-room-entity"
+          placeholder="climate.living"
+          value={draft.entityId}
+          onChange={(event) => onChange({ ...draft, entityId: event.target.value })}
+        />
+      </div>
+
+      <button type="button" onClick={onSubmit}>
+        Create room
+      </button>
     </div>
   );
 }

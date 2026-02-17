@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Form, Input, InputNumber, Tabs, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Plus } from "lucide-react";
 import type { WaterHeaterConfig, WaterHeaterScheduleBlock } from "../../../shared/models";
 import WaterHeaterScheduleTable from "./WaterHeaterScheduleTable";
 
@@ -82,9 +81,10 @@ export default function WaterHeaterPanel({
       {
         key: "__add__",
         label: (
-          <>
-            <PlusOutlined /> Add mode
-          </>
+          <span className="with-icon">
+            <Plus size={16} aria-hidden="true" />
+            Add mode
+          </span>
         )
       }
     ],
@@ -93,55 +93,73 @@ export default function WaterHeaterPanel({
 
   return (
     <div>
-      <Typography.Title level={5}>Water heater</Typography.Title>
-      <Form layout="vertical">
-        <Form.Item label="Climate entity id">
-          <Input value={entityIdDraft} onChange={(event) => setEntityIdDraft(event.target.value)} />
-        </Form.Item>
-        <Form.Item label="Heating temperature (C)">
-          <InputNumber
-            min={30}
-            max={65}
-            value={heatingTemperatureDraft}
-            onChange={(value) => setHeatingTemperatureDraft(Number(value ?? 55))}
-          />
-        </Form.Item>
-        <Button
-          type="primary"
-          onClick={() => onSaveConfig(entityIdDraft.trim(), heatingTemperatureDraft)}
-        >
-          Save config
-        </Button>
-      </Form>
+      <h4>Water heater</h4>
 
-      <Typography.Title level={4} style={{ marginTop: 20 }}>
-        Modes & schedules
-      </Typography.Title>
-      <Tabs activeKey={activeTab} items={modeTabs} onChange={setActiveTab} />
+      <div className="inline-field">
+        <label htmlFor="water-heater-entity">Climate entity id</label>
+        <input
+          id="water-heater-entity"
+          value={entityIdDraft}
+          onChange={(event) => setEntityIdDraft(event.target.value)}
+        />
+      </div>
+      <div className="inline-field">
+        <label htmlFor="water-heater-temp">Heating temperature (°C)</label>
+        <input
+          id="water-heater-temp"
+          type="number"
+          min={30}
+          max={65}
+          value={heatingTemperatureDraft}
+          onChange={(event) => setHeatingTemperatureDraft(Number(event.target.value))}
+        />
+      </div>
+      <button type="button" onClick={() => onSaveConfig(entityIdDraft.trim(), heatingTemperatureDraft)}>
+        Save config
+      </button>
+
+      <h4 style={{ marginTop: "1.5rem" }}>Modes and schedules</h4>
+      <div className="row-actions">
+        {modeTabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={activeTab === tab.key ? "" : "secondary"}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {activeTab === "__add__" ? (
-        <Form layout="vertical">
-          <Form.Item label="Mode name">
-            <Input
+        <>
+          <div className="inline-field">
+            <label htmlFor="water-heater-create-mode">Mode name</label>
+            <input
+              id="water-heater-create-mode"
               placeholder="holiday"
               value={modeDraft.name}
               onChange={(event) => onModeDraftChange({ name: event.target.value })}
             />
-          </Form.Item>
-          <Button type="primary" onClick={() => onCreateMode(modeDraft.name.trim())}>
+          </div>
+          <button type="button" onClick={() => onCreateMode(modeDraft.name.trim())}>
             Add mode
-          </Button>
-        </Form>
+          </button>
+        </>
       ) : null}
 
       {selectedMode && activeTab !== "__add__" ? (
         <>
-          <Form layout="vertical">
-            <Form.Item label="Mode name">
-              <Input value={modeNameDraft} onChange={(event) => setModeNameDraft(event.target.value)} />
-            </Form.Item>
-          </Form>
-          <Typography.Text type="secondary">Schedule controls on/off heating only.</Typography.Text>
+          <div className="inline-field">
+            <label htmlFor="water-heater-mode-name">Mode name</label>
+            <input
+              id="water-heater-mode-name"
+              value={modeNameDraft}
+              onChange={(event) => setModeNameDraft(event.target.value)}
+            />
+          </div>
+          <p className="muted-text">Schedule controls on/off heating only.</p>
           <WaterHeaterScheduleTable
             modeName={selectedMode.name}
             schedule={selectedMode.schedule}

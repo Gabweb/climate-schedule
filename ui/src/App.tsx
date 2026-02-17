@@ -1,40 +1,57 @@
-import { Alert, Button, Card, Drawer, Layout, Space, Spin, Switch, Typography } from "antd";
-import { CloseOutlined, PlusOutlined } from "@ant-design/icons";
+import { Suspense, lazy, useState } from "react";
+import { Plus, X } from "lucide-react";
 import RoomList from "./components/RoomList";
-import SettingsPanel from "./components/SettingsPanel";
 import AddRoomForm from "./components/AddRoomForm";
 import WaterHeaterCard from "./components/WaterHeaterCard";
-import WaterHeaterPanel from "./components/WaterHeaterPanel";
 import { useClimateScheduleState } from "./hooks/useClimateScheduleState";
+
+const SettingsPanel = lazy(() => import("./components/SettingsPanel"));
+const WaterHeaterPanel = lazy(() => import("./components/WaterHeaterPanel"));
 
 export default function App() {
   const state = useClimateScheduleState();
+  const [editModeEnabled, setEditModeEnabled] = useState(false);
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Layout.Content style={{ padding: "24px", maxWidth: 1200, margin: "0 auto", width: "100%" }}>
-        {state.state.status === "loading" && <Typography.Text>Loading rooms...</Typography.Text>}
-        {state.state.status === "error" && (
-          <Typography.Text>Failed: {state.state.message}</Typography.Text>
-        )}
+    <>
+      <main>
+        {state.state.status === "loading" && <p>Loading rooms...</p>}
+        {state.state.status === "error" && <p className="error-text">Failed: {state.state.message}</p>}
+
+        {state.notice ? (
+          <article className="error-text">
+            <header>
+              <strong>Error</strong>
+            </header>
+            <p>{state.notice}</p>
+            <button type="button" className="secondary" onClick={state.clearNotice}>
+              Dismiss
+            </button>
+          </article>
+        ) : null}
 
         {state.state.status === "loaded" && (
           <>
             {!state.startupSuccessful ? (
-              <Alert
-                type="warning"
-                showIcon
-                message="Something is wrong, please check the logs."
-                style={{ marginBottom: 16 }}
-              />
+              <article className="warning-text">
+                <strong>Something is wrong, please check the logs.</strong>
+              </article>
             ) : null}
 
-            <Card size="small" style={{ marginBottom: 16 }}>
-              <Space>
-                <Typography.Text strong>Holiday mode</Typography.Text>
-                <Switch checked={state.settings.holidayModeEnabled} onChange={state.handleHolidayToggle} />
-              </Space>
-            </Card>
+            <article>
+              <div className="row-actions">
+                <strong>Holiday mode</strong>
+                <label>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={state.settings.holidayModeEnabled}
+                    onChange={(event) => state.handleHolidayToggle(event.target.checked)}
+                  />
+                  Enabled
+                </label>
+              </div>
+            </article>
 
             <RoomList
               rooms={state.rooms}
@@ -42,6 +59,7 @@ export default function App() {
               onSetActiveMode={state.handleSetActiveMode}
               nowMinute={state.nowMinute}
               settings={state.settings}
+              canEdit={editModeEnabled}
               leadingNode={
                 <WaterHeaterCard
                   config={state.waterHeater}
@@ -49,115 +67,138 @@ export default function App() {
                   nowMinute={state.nowMinute}
                   onEdit={() => state.setShowWaterHeaterSettings(true)}
                   onSetActiveMode={state.handleSetWaterHeaterActiveMode}
+                  canEdit={editModeEnabled}
                 />
               }
               addRoomNode={
-                !state.showAddRoom ? (
-                  <Button
-                    type="dashed"
-                    icon={<PlusOutlined />}
-                    onClick={() => state.setShowAddRoom(true)}
-                    style={{ width: "100%" }}
-                  >
+                editModeEnabled ? (!state.showAddRoom ? (
+                  <button type="button" className="outline with-icon" onClick={() => state.setShowAddRoom(true)}>
+                    <Plus size={16} aria-hidden="true" />
                     Add room
-                  </Button>
+                  </button>
                 ) : (
-                  <Card
-                    title="Add room"
-                    size="small"
-                    style={{ width: "100%" }}
-                    extra={
-                      <Button
-                        type="text"
-                        icon={<CloseOutlined />}
+                  <article>
+                    <header className="card-header">
+                      <strong>Add room</strong>
+                      <button
+                        type="button"
+                        className="secondary icon-only-button"
                         aria-label="Collapse add room"
                         onClick={() => state.setShowAddRoom(false)}
-                      />
-                    }
-                  >
+                      >
+                        <X size={16} aria-hidden="true" />
+                      </button>
+                    </header>
                     <AddRoomForm
                       draft={state.roomDraft}
                       onChange={state.setRoomDraft}
                       onSubmit={state.handleCreateRoom}
                       showTitle={false}
                     />
-                  </Card>
-                )
+                  </article>
+                )) : undefined
               }
             />
+
+            <label>
+              <input
+                type="checkbox"
+                checked={editModeEnabled}
+                onChange={(event) => {
+                  const enabled = event.target.checked;
+                  setEditModeEnabled(enabled);
+                  if (!enabled) {
+                    state.setShowAddRoom(false);
+                    state.setShowSettings(false);
+                    state.setShowWaterHeaterSettings(false);
+                  }
+                }}
+              />
+              Enable edit mode
+            </label>
           </>
         )}
-      </Layout.Content>
+      </main>
 
-      <Drawer
-        title="Edit room"
-        placement="right"
-        width={520}
-        onClose={() => state.setShowSettings(false)}
-        open={state.showSettings}
-      >
-        {state.state.status === "loaded" && (
-          <SettingsPanel
-            room={state.selectedRoom}
-            modeDraft={state.modeDraft}
-            roomEditDraft={state.roomEditDraft}
-            onModeDraftChange={state.setModeDraft}
-            onRoomEditDraftChange={state.setRoomEditDraft}
-            onSaveRoom={state.handleSaveRoom}
-            onCreateMode={state.handleCreateMode}
-            onDeleteMode={state.handleDeleteMode}
-            onRenameMode={state.handleRenameMode}
-            onScheduleChange={state.handleScheduleChange}
-            onAddSlot={state.handleAddSlot}
-            onRemoveSlot={state.handleRemoveSlot}
-            onSaveSchedule={state.handleSaveSchedule}
-          />
-        )}
-      </Drawer>
+      {editModeEnabled && state.showSettings ? (
+        <>
+          <div className="panel-backdrop" onClick={() => state.setShowSettings(false)} />
+          <aside className="panel-shell" aria-label="Edit room panel">
+            <header className="card-header">
+              <strong>Edit room</strong>
+              <button
+                type="button"
+                className="secondary icon-only-button"
+                aria-label="Close room editor"
+                onClick={() => state.setShowSettings(false)}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </header>
+            {state.state.status === "loaded" ? (
+              <Suspense fallback={<p className="muted-text">Loading editor...</p>}>
+                <SettingsPanel
+                  room={state.selectedRoom}
+                  modeDraft={state.modeDraft}
+                  roomEditDraft={state.roomEditDraft}
+                  onModeDraftChange={state.setModeDraft}
+                  onRoomEditDraftChange={state.setRoomEditDraft}
+                  onSaveRoom={state.handleSaveRoom}
+                  onCreateMode={state.handleCreateMode}
+                  onDeleteMode={state.handleDeleteMode}
+                  onRenameMode={state.handleRenameMode}
+                  onScheduleChange={state.handleScheduleChange}
+                  onAddSlot={state.handleAddSlot}
+                  onRemoveSlot={state.handleRemoveSlot}
+                  onSaveSchedule={state.handleSaveSchedule}
+                />
+              </Suspense>
+            ) : null}
+          </aside>
+        </>
+      ) : null}
 
-      <Drawer
-        title="Edit water heater"
-        placement="right"
-        width={520}
-        onClose={() => state.setShowWaterHeaterSettings(false)}
-        open={state.showWaterHeaterSettings}
-      >
-        {state.state.status === "loaded" ? (
-          <WaterHeaterPanel
-            config={state.waterHeater}
-            modeDraft={state.waterHeaterModeDraft}
-            onModeDraftChange={state.setWaterHeaterModeDraft}
-            onSaveConfig={state.handleSaveWaterHeaterConfig}
-            onCreateMode={state.handleCreateWaterHeaterMode}
-            onDeleteMode={state.handleDeleteWaterHeaterMode}
-            onRenameMode={state.handleRenameWaterHeaterMode}
-            onScheduleChange={state.handleWaterHeaterScheduleChange}
-            onAddSlot={state.handleAddWaterHeaterSlot}
-            onRemoveSlot={state.handleRemoveWaterHeaterSlot}
-            onSaveSchedule={state.handleSaveWaterHeaterSchedule}
-          />
-        ) : null}
-      </Drawer>
+      {editModeEnabled && state.showWaterHeaterSettings ? (
+        <>
+          <div className="panel-backdrop" onClick={() => state.setShowWaterHeaterSettings(false)} />
+          <aside className="panel-shell" aria-label="Edit water heater panel">
+            <header className="card-header">
+              <strong>Edit water heater</strong>
+              <button
+                type="button"
+                className="secondary icon-only-button"
+                aria-label="Close water heater editor"
+                onClick={() => state.setShowWaterHeaterSettings(false)}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </header>
+            {state.state.status === "loaded" ? (
+              <Suspense fallback={<p className="muted-text">Loading editor...</p>}>
+                <WaterHeaterPanel
+                  config={state.waterHeater}
+                  modeDraft={state.waterHeaterModeDraft}
+                  onModeDraftChange={state.setWaterHeaterModeDraft}
+                  onSaveConfig={state.handleSaveWaterHeaterConfig}
+                  onCreateMode={state.handleCreateWaterHeaterMode}
+                  onDeleteMode={state.handleDeleteWaterHeaterMode}
+                  onRenameMode={state.handleRenameWaterHeaterMode}
+                  onScheduleChange={state.handleWaterHeaterScheduleChange}
+                  onAddSlot={state.handleAddWaterHeaterSlot}
+                  onRemoveSlot={state.handleRemoveWaterHeaterSlot}
+                  onSaveSchedule={state.handleSaveWaterHeaterSchedule}
+                />
+              </Suspense>
+            ) : null}
+          </aside>
+        </>
+      ) : null}
 
       {state.state.status === "loaded" && state.isSyncing ? (
-        <div
-          style={{
-            position: "fixed",
-            right: 20,
-            bottom: 20,
-            background: "rgba(255, 255, 255, 0.95)",
-            border: "1px solid #f0f0f0",
-            borderRadius: 10,
-            padding: "8px 12px",
-            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.08)"
-          }}
-        >
-          <Space size="small">
-            <Spin size="small" />
-            <Typography.Text type="secondary">Syncing...</Typography.Text>
-          </Space>
+        <div className="sync-indicator" role="status" aria-live="polite">
+          Syncing...
         </div>
       ) : null}
-    </Layout>
+    </>
   );
 }
